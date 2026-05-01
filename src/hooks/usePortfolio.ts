@@ -1,15 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { getFII } from "@/data/fiis";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Position {
   ticker: string;
   shares: number;
-  avgPrice: number; // preço médio por cota
+  avgPrice: number;
 }
 
 const KEY = "fii.portfolio.v1";
 
-function read(): Position[] {
+function readLocal(): Position[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
@@ -20,68 +22,147 @@ function read(): Position[] {
   }
 }
 
+function writeLocal(p: Position[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(KEY, JSON.stringify(p));
+}
+
 function seed(): Position[] {
-  // Carteira de exemplo para primeira experiência
   const initial: Position[] = [
     { ticker: "MXRF11", shares: 320, avgPrice: 9.8 },
     { ticker: "HGLG11", shares: 18, avgPrice: 158.0 },
     { ticker: "KNCR11", shares: 25, avgPrice: 100.2 },
     { ticker: "VISC11", shares: 22, avgPrice: 104.5 },
   ];
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(KEY, JSON.stringify(initial));
-  }
+  writeLocal(initial);
   return initial;
 }
 
 export function usePortfolio() {
+  const { user, loading: authLoading } = useAuth();
   const [positions, setPositions] = useState<Position[]>([]);
   const [ready, setReady] = useState(false);
 
+  // Carrega/sync conforme estado do usuário
   useEffect(() => {
-    setPositions(read());
-    setReady(true);
-  }, []);
+    if (authLoading) return;
+    let cancelled = false;
 
-  const persist = useCallback((next: Position[]) => {
-    setPositions(next);
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  }, []);
+    async function load() {
+      if (!user) {
+        setPositions(readLocal());
+        setReady(true);
+        return;
+      }
 
-  const addOrUpdate = useCallback(
-    (ticker: string, shares: number, avgPrice: number) => {
-      const t = ticker.toUpperCase();
-      setPositions((curr) => {
-        const existing = curr.find((p) => p.ticker === t);
-        let next: Position[];
-        if (existing) {
-          const totalShares = existing.shares + shares;
-          const newAvg =
-            totalShares > 0
-              ? (existing.shares * existing.avgPrice + shares * avgPrice) / totalShares
-              : avgPrice;
-          next = curr.map((p) =>
-            p.ticker === t ? { ...p, shares: totalShares, avgPrice: newAvg } : p
-          );
-        } else {
-          next = [...curr, { ticker: t, shares, avgPrice }];
+      // Carrega da nuvem
+      const { data, error } = await supabase
+        .from("positions")
+        .select("ticker, shares, avg_price")
+        .order("ticker");
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("[positions] load error", error);
+        setPositions(readLocal());
+        setReady(true);
+        return;
+      }
+
+      const cloud: Position[] = (data ?? []).map((r) => ({
+        ticker: r.ticker,
+        shares: Number(r.shares),
+        avgPrice: Number(r.avg_price),
+      }));
+
+      // Se nuvem vazia e há dados locais, faz upload (migração inicial)
+      if (cloud.length === 0) {
+        const local = readLocal();
+        if (local.length > 0) {
+          const rows = local.map((p) => ({
+            user_id: user.id,
+            ticker: p.ticker,
+            shares: p.shares,
+            avg_price: p.avgPrice,
+          }));
+          await supabase.from("positions").upsert(rows, { onConflict: "user_id,ticker" });
+          setPositions(local);
+          setReady(true);
+          return;
         }
-        window.localStorage.setItem(KEY, JSON.stringify(next));
-        return next;
-      });
+      }
+
+      setPositions(cloud);
+      setReady(true);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
+
+  const persist = useCallback(
+    async (next: Position[]) => {
+      setPositions(next);
+      if (!user) {
+        writeLocal(next);
+      }
     },
-    []
+    [user]
   );
 
-  const remove = useCallback((ticker: string) => {
-    setPositions((curr) => {
-      const next = curr.filter((p) => p.ticker !== ticker);
-      window.localStorage.setItem(KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const addOrUpdate = useCallback(
+    async (ticker: string, shares: number, avgPrice: number) => {
+      const t = ticker.toUpperCase();
+      const existing = positions.find((p) => p.ticker === t);
+      let nextShares = shares;
+      let nextAvg = avgPrice;
+      if (existing) {
+        const total = existing.shares + shares;
+        nextShares = total;
+        nextAvg = total > 0 ? (existing.shares * existing.avgPrice + shares * avgPrice) / total : avgPrice;
+      }
+      const next = existing
+        ? positions.map((p) => (p.ticker === t ? { ...p, shares: nextShares, avgPrice: nextAvg } : p))
+        : [...positions, { ticker: t, shares: nextShares, avgPrice: nextAvg }];
 
-  // Cálculos derivados
+      setPositions(next);
+
+      if (user) {
+        const { error } = await supabase
+          .from("positions")
+          .upsert(
+            { user_id: user.id, ticker: t, shares: nextShares, avg_price: nextAvg },
+            { onConflict: "user_id,ticker" }
+          );
+        if (error) console.error("[positions] upsert", error);
+      } else {
+        writeLocal(next);
+      }
+    },
+    [positions, user]
+  );
+
+  const remove = useCallback(
+    async (ticker: string) => {
+      const next = positions.filter((p) => p.ticker !== ticker);
+      setPositions(next);
+      if (user) {
+        const { error } = await supabase
+          .from("positions")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("ticker", ticker);
+        if (error) console.error("[positions] delete", error);
+      } else {
+        writeLocal(next);
+      }
+    },
+    [positions, user]
+  );
+
   const enriched = positions
     .map((p) => {
       const fii = getFII(p.ticker);
@@ -133,5 +214,6 @@ export function usePortfolio() {
     addOrUpdate,
     remove,
     setAll: persist,
+    cloudSynced: !!user,
   };
 }
