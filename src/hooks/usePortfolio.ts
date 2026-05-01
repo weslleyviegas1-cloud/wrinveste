@@ -165,17 +165,41 @@ export function usePortfolio() {
     }
   }, [user]);
 
+  // Cotações em tempo real (server function -> brapi.dev, refresh 60s)
+  const tickers = useMemo(() => positions.map((p) => p.ticker), [positions]);
+  const { quotes, loading: quotesLoading, error: quotesError, updatedAt: quotesUpdatedAt, refresh: refreshQuotes } =
+    useQuotes(tickers);
+
   const enriched = positions
     .map((p) => {
       const fii = getFII(p.ticker);
       if (!fii) return null;
+      const live = quotes[p.ticker];
+      // Usa cotação ao vivo quando disponível, senão fallback para mock
+      const price = live?.price ?? fii.price;
+      const lastDiv = live?.lastDividend ?? fii.lastDividend;
+      const monthlyAvg = live?.monthlyDividend ?? fii.lastDividend;
+      const dy = live?.dividendYield ?? fii.dividendYield;
+      const change = live?.change ?? 0;
+
       const invested = p.shares * p.avgPrice;
-      const current = p.shares * fii.price;
-      const monthlyDividend = p.shares * fii.lastDividend;
+      const current = p.shares * price;
+      const monthlyDividend = p.shares * monthlyAvg;
       const yearlyDividend = monthlyDividend * 12;
       const profit = current - invested;
       const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
-      return { ...p, fii, invested, current, monthlyDividend, yearlyDividend, profit, profitPct };
+      return {
+        ...p,
+        fii: { ...fii, price, lastDividend: lastDiv, dividendYield: dy },
+        invested,
+        current,
+        monthlyDividend,
+        yearlyDividend,
+        profit,
+        profitPct,
+        live: !!live,
+        change,
+      };
     })
     .filter(Boolean) as Array<
     Position & {
@@ -186,6 +210,8 @@ export function usePortfolio() {
       yearlyDividend: number;
       profit: number;
       profitPct: number;
+      live: boolean;
+      change: number;
     }
   >;
 
@@ -218,5 +244,10 @@ export function usePortfolio() {
     clearAll,
     setAll: persist,
     cloudSynced: !!user,
+    quotes,
+    quotesLoading,
+    quotesError,
+    quotesUpdatedAt,
+    refreshQuotes,
   };
 }
