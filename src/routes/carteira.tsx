@@ -11,7 +11,7 @@ import { brl, num, pct } from "@/lib/format";
 export const Route = createFileRoute("/carteira")({
   head: () => ({
     meta: [
-      { title: "Carteira — FII Premium" },
+      { title: "Carteira — WR Investe" },
       { name: "description", content: "Gerencie seus Fundos Imobiliários e acompanhe o desempenho." },
     ],
   }),

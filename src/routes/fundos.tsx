@@ -10,7 +10,7 @@ import { brl, pct } from "@/lib/format";
 export const Route = createFileRoute("/fundos")({
   head: () => ({
     meta: [
-      { title: "Fundos — FII Premium" },
+      { title: "Fundos — WR Investe" },
       { name: "description", content: "Explore e analise dezenas de Fundos Imobiliários com score inteligente." },
     ],
   }),

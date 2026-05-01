@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Entrar — FII Premium" },
+      { title: "Entrar — WR Investe" },
       { name: "description", content: "Acesse sua carteira na nuvem e sincronize entre dispositivos." },
     ],
   }),

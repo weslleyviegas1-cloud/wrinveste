@@ -21,7 +21,7 @@ import { brl, pct } from "@/lib/format";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — FII Premium" },
+      { title: "Dashboard — WR Investe" },
       {
         name: "description",
         content: "Visão geral da sua carteira de Fundos Imobiliários, lucro e renda passiva.",
