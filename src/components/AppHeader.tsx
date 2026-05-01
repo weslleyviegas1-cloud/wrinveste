@@ -16,7 +16,7 @@ export function AppHeader({ title, subtitle }: { title: string; subtitle?: strin
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary glow-green" />
-          FII Premium
+          WR Investe
         </div>
         <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight sm:text-3xl truncate">
           {title}

@@ -10,7 +10,7 @@ import { brl, num, pct } from "@/lib/format";
 export const Route = createFileRoute("/simulador")({
   head: () => ({
     meta: [
-      { title: "Simulador — FII Premium" },
+      { title: "Simulador — WR Investe" },
       { name: "description", content: "Simule investimentos em FIIs e veja sua renda passiva projetada." },
     ],
   }),
