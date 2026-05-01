@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Cloud, CloudOff, LogOut, User } from "lucide-react";
+import { Cloud, CloudOff, LogOut } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/AuthContext";
 
