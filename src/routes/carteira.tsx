@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Eraser } from "lucide-react";
 import { useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/carteira")({
 type Mode = "valor" | "cotas";
 
 function Carteira() {
-  const { positions, totals, addOrUpdate, remove } = usePortfolio();
+  const { positions, totals, addOrUpdate, remove, clearAll } = usePortfolio();
   const [open, setOpen] = useState(false);
   const [ticker, setTicker] = useState("MXRF11");
   const [mode, setMode] = useState<Mode>("valor");
@@ -54,16 +54,34 @@ function Carteira() {
     <div className="px-5 sm:px-8">
       <AppHeader title="Carteira" subtitle={`${positions.length} fundos · ${brl(totals.current)}`} />
 
-      <motion.button
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow-green)] transition-transform"
-      >
-        <Plus className="h-4 w-4" /> Adicionar Fundo
-      </motion.button>
+      <div className="flex gap-2">
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setOpen(true)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow-green)] transition-transform"
+        >
+          <Plus className="h-4 w-4" /> Adicionar Fundo
+        </motion.button>
+        {positions.length > 0 && (
+          <motion.button
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => {
+              if (confirm("Tem certeza que deseja zerar toda a carteira? Esta ação não pode ser desfeita.")) {
+                clearAll();
+              }
+            }}
+            className="flex items-center justify-center gap-2 rounded-2xl glass px-4 text-xs font-semibold text-muted-foreground transition-colors hover:text-danger"
+            title="Zerar carteira"
+          >
+            <Eraser className="h-4 w-4" />
+          </motion.button>
+        )}
+      </div>
 
       <section className="mt-5 space-y-3">
         {positions.length === 0 ? (
