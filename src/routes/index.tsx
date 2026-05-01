@@ -67,6 +67,7 @@ function Dashboard() {
 
   const pieData = positions.map((p) => ({ name: p.ticker, value: p.current }));
   const profitPositive = totals.profit >= 0;
+  const isEmpty = ready && positions.length === 0;
 
   return (
     <div className="px-5 sm:px-8">
@@ -88,55 +89,66 @@ function Dashboard() {
             {ready ? brl(totals.current) : "R$ —"}
           </h2>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-              profitPositive
-                ? "bg-success/15 text-success"
-                : "bg-danger/15 text-danger"
-            }`}
-          >
-            {profitPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-            {brl(Math.abs(totals.profit))} ({pct(totals.profitPct)})
+        {!isEmpty && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                profitPositive
+                  ? "bg-success/15 text-success"
+                  : "bg-danger/15 text-danger"
+              }`}
+            >
+              {profitPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+              {brl(Math.abs(totals.profit))} ({pct(totals.profitPct)})
+            </div>
+            <span className="text-xs text-muted-foreground">vs. investido {brl(totals.invested)}</span>
           </div>
-          <span className="text-xs text-muted-foreground">vs. investido {brl(totals.invested)}</span>
-        </div>
+        )}
 
-        {/* Growth chart */}
-        <div className="-mx-2 mt-5 h-36">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
-              <defs>
-                <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
-                  <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis hide domain={["dataMin", "dataMax"]} />
-              <Tooltip
-                cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
-                contentStyle={{
-                  background: "oklch(0.18 0 0 / 0.95)",
-                  border: "1px solid oklch(1 0 0 / 0.1)",
-                  borderRadius: 12,
-                  color: "oklch(0.985 0 0)",
-                  fontSize: 12,
-                }}
-                formatter={(v) => [brl(Number(v)), "Patrimônio"]}
-                labelStyle={{ color: "oklch(0.7 0 0)" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="v"
-                stroke="oklch(0.78 0.22 145)"
-                strokeWidth={2.5}
-                fill="url(#g1)"
-                animationDuration={1100}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        {isEmpty ? (
+          <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-5 text-center">
+            <p className="text-sm font-medium">Você ainda não tem investimentos.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Adicione seu primeiro fundo na aba Carteira para começar a acompanhar.
+            </p>
+          </div>
+        ) : (
+          /* Growth chart */
+          <div className="-mx-2 mt-5 h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
+                    <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis hide domain={["dataMin", "dataMax"]} />
+                <Tooltip
+                  cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
+                  contentStyle={{
+                    background: "oklch(0.18 0 0 / 0.95)",
+                    border: "1px solid oklch(1 0 0 / 0.1)",
+                    borderRadius: 12,
+                    color: "oklch(0.985 0 0)",
+                    fontSize: 12,
+                  }}
+                  formatter={(v) => [brl(Number(v)), "Patrimônio"]}
+                  labelStyle={{ color: "oklch(0.7 0 0)" }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="v"
+                  stroke="oklch(0.78 0.22 145)"
+                  strokeWidth={2.5}
+                  fill="url(#g1)"
+                  animationDuration={1100}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </motion.section>
 
       {/* STATS GRID */}
