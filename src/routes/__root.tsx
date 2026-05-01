@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { BottomNav } from "@/components/BottomNav";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PWARegister } from "@/components/PWARegister";
 
 import appCss from "../styles.css?url";
 
@@ -31,14 +32,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "FII Premium — Assistente Inteligente de Fundos Imobiliários" },
+      { title: "WR Investe — Assistente Inteligente de Fundos Imobiliários" },
       {
         name: "description",
         content:
           "Acompanhe sua carteira de FIIs, simule investimentos, analise dividendos e visualize sua renda passiva em uma experiência premium.",
       },
       { name: "theme-color", content: "#0B0B0B" },
-      { property: "og:title", content: "FII Premium — Assistente Inteligente de Fundos Imobiliários" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "WR Investe" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { property: "og:title", content: "WR Investe — Assistente Inteligente de Fundos Imobiliários" },
       {
         property: "og:description",
         content: "Carteira, simulador, ranking e renda passiva em um app fintech premium.",
@@ -54,6 +59,10 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -86,6 +95,7 @@ function RootComponent() {
   const hideNav = pathname.startsWith("/login");
   return (
     <AuthProvider>
+      <PWARegister />
       <div className={`relative min-h-screen ${hideNav ? "" : "pb-28"}`}>
         <div className="mx-auto max-w-2xl">
           <Outlet />
