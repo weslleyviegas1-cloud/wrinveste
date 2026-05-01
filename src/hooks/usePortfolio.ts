@@ -153,6 +153,17 @@ export function usePortfolio() {
     [positions, user]
   );
 
+  const clearAll = useCallback(async () => {
+    setPositions([]);
+    if (user) {
+      const { error } = await supabase.from("positions").delete().eq("user_id", user.id);
+      if (error) console.error("[positions] clear", error);
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(KEY);
+    }
+  }, [user]);
+
   const enriched = positions
     .map((p) => {
       const fii = getFII(p.ticker);
@@ -203,6 +214,7 @@ export function usePortfolio() {
     totals: { ...totals, profit, profitPct, yearly, yieldOnCost },
     addOrUpdate,
     remove,
+    clearAll,
     setAll: persist,
     cloudSynced: !!user,
   };
