@@ -1,5 +1,6 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { BottomNav } from "@/components/BottomNav";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 import appCss from "../styles.css?url";
 
@@ -74,12 +75,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hideNav = pathname.startsWith("/login");
   return (
-    <div className="relative min-h-screen pb-28">
-      <div className="mx-auto max-w-2xl">
-        <Outlet />
+    <AuthProvider>
+      <div className={`relative min-h-screen ${hideNav ? "" : "pb-28"}`}>
+        <div className="mx-auto max-w-2xl">
+          <Outlet />
+        </div>
+        {!hideNav && <BottomNav />}
       </div>
-      <BottomNav />
-    </div>
+    </AuthProvider>
   );
 }

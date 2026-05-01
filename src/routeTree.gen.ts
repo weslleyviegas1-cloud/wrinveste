@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SimuladorRouteImport } from './routes/simulador'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as FundosRouteImport } from './routes/fundos'
 import { Route as CarteiraRouteImport } from './routes/carteira'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const SimuladorRoute = SimuladorRouteImport.update({
   id: '/simulador',
   path: '/simulador',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FundosRoute = FundosRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
+  '/login': typeof LoginRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
+  '/login': typeof LoginRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
+  '/login': typeof LoginRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/carteira' | '/fundos' | '/simulador'
+  fullPaths: '/' | '/carteira' | '/fundos' | '/login' | '/simulador'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/carteira' | '/fundos' | '/simulador'
-  id: '__root__' | '/' | '/carteira' | '/fundos' | '/simulador'
+  to: '/' | '/carteira' | '/fundos' | '/login' | '/simulador'
+  id: '__root__' | '/' | '/carteira' | '/fundos' | '/login' | '/simulador'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CarteiraRoute: typeof CarteiraRoute
   FundosRoute: typeof FundosRoute
+  LoginRoute: typeof LoginRoute
   SimuladorRoute: typeof SimuladorRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/simulador'
       fullPath: '/simulador'
       preLoaderRoute: typeof SimuladorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fundos': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CarteiraRoute: CarteiraRoute,
   FundosRoute: FundosRoute,
+  LoginRoute: LoginRoute,
   SimuladorRoute: SimuladorRoute,
 }
 export const routeTree = rootRouteImport
