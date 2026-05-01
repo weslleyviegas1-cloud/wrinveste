@@ -12,7 +12,7 @@ import {
   Cell,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Coins, Wallet, PiggyBank, Calendar } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Coins, Wallet, PiggyBank, Calendar, Radio, RefreshCw } from "lucide-react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -57,7 +57,7 @@ function buildGrowthSeries(invested: number, current: number) {
 }
 
 function Dashboard() {
-  const { positions, totals, ready } = usePortfolio();
+  const { positions, totals, ready, quotesLoading, quotesUpdatedAt, quotesError, refreshQuotes } = usePortfolio();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   const series = useMemo(
@@ -68,10 +68,37 @@ function Dashboard() {
   const pieData = positions.map((p) => ({ name: p.ticker, value: p.current }));
   const profitPositive = totals.profit >= 0;
   const isEmpty = ready && positions.length === 0;
+  const updatedLabel = quotesUpdatedAt
+    ? new Date(quotesUpdatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : null;
 
   return (
     <div className="px-5 sm:px-8">
       <AppHeader title="Olá, Investidor" subtitle="Sua visão geral de hoje" />
+
+      {/* LIVE STATUS */}
+      {!isEmpty && (
+        <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className={`absolute inline-flex h-full w-full rounded-full ${quotesError ? "bg-destructive" : "bg-success"} opacity-60 animate-ping`} />
+              <span className={`relative inline-flex h-2 w-2 rounded-full ${quotesError ? "bg-destructive" : "bg-success"}`} />
+            </span>
+            <Radio className="h-3 w-3" />
+            <span className="tabular">
+              {quotesError ? "Sem conexão" : updatedLabel ? `Cotações ao vivo · ${updatedLabel}` : "Buscando cotações..."}
+            </span>
+          </div>
+          <button
+            onClick={() => refreshQuotes()}
+            className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/5 transition"
+            aria-label="Atualizar cotações"
+          >
+            <RefreshCw className={`h-3 w-3 ${quotesLoading ? "animate-spin" : ""}`} />
+            <span>Atualizar</span>
+          </button>
+        </div>
+      )}
 
       {/* HERO BALANCE */}
       <motion.section
