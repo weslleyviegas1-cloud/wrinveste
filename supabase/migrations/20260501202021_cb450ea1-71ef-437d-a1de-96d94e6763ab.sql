@@ -1,0 +1,1 @@
+DELETE FROM public.positions WHERE user_id = 'cd9bdcf8-e542-4d5e-abeb-cae74aacc347';
