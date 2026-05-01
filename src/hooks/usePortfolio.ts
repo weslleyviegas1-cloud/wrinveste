@@ -15,8 +15,9 @@ function readLocal(): Position[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return seed();
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -25,17 +26,6 @@ function readLocal(): Position[] {
 function writeLocal(p: Position[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(p));
-}
-
-function seed(): Position[] {
-  const initial: Position[] = [
-    { ticker: "MXRF11", shares: 320, avgPrice: 9.8 },
-    { ticker: "HGLG11", shares: 18, avgPrice: 158.0 },
-    { ticker: "KNCR11", shares: 25, avgPrice: 100.2 },
-    { ticker: "VISC11", shares: 22, avgPrice: 104.5 },
-  ];
-  writeLocal(initial);
-  return initial;
 }
 
 export function usePortfolio() {
