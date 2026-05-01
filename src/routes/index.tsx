@@ -123,7 +123,7 @@ function Dashboard() {
                   color: "oklch(0.985 0 0)",
                   fontSize: 12,
                 }}
-                formatter={(v: number) => [brl(v), "Patrimônio"]}
+                formatter={(v) => [brl(Number(v)), "Patrimônio"]}
                 labelStyle={{ color: "oklch(0.7 0 0)" }}
               />
               <Area

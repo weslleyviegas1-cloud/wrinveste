@@ -275,7 +275,7 @@ function Field({
   label: string;
   value: string;
   onChange: (v: string) => void;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value">) {
   return (
     <label className="mt-4 block">
       <span className="block text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
