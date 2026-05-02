@@ -133,13 +133,29 @@ function Carteira() {
                 />
               </div>
 
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2">
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     Dividendos / mês
                   </p>
                   <p className="text-sm font-semibold tabular text-primary">
                     {brl(p.monthlyDividend)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Já recebido {p.monthsHeld > 0 ? `(${p.monthsHeld}m)` : ""}
+                  </p>
+                  <p className="text-sm font-semibold tabular text-primary">
+                    {brl(p.received)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Retorno total
+                  </p>
+                  <p className={`text-sm font-semibold tabular ${p.totalReturn >= 0 ? "text-success" : "text-danger"}`}>
+                    {brl(p.totalReturn)} ({pct(p.totalReturnPct)})
                   </p>
                 </div>
                 <div className="text-right">
