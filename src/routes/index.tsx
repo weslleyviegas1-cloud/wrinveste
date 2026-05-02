@@ -43,16 +43,15 @@ const PIE_COLORS = [
   "oklch(0.65 0.22 350)",
 ];
 
-function buildGrowthSeries(invested: number, current: number) {
-  // Série suave 12 meses do investido até o atual
-  const points = 12;
+function buildIncomeProjection(monthly: number, alreadyReceived: number) {
+  // Próximos 12 meses de renda acumulada (a partir do que já foi recebido)
+  const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const today = new Date();
   const out: { m: string; v: number }[] = [];
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  for (let i = 0; i < points; i++) {
-    const t = i / (points - 1);
-    const eased = 1 - Math.pow(1 - t, 2.2);
-    const wiggle = 1 + Math.sin(i * 1.3) * 0.012;
-    out.push({ m: months[i], v: (invested + (current - invested) * eased) * wiggle });
+  out.push({ m: "Hoje", v: alreadyReceived });
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    out.push({ m: monthsLabels[d.getMonth()], v: alreadyReceived + monthly * i });
   }
   return out;
 }
@@ -62,8 +61,8 @@ function Dashboard() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   const series = useMemo(
-    () => buildGrowthSeries(totals.invested || 1, totals.current || 1),
-    [totals.invested, totals.current]
+    () => buildIncomeProjection(totals.monthly || 0, totals.received || 0),
+    [totals.monthly, totals.received]
   );
 
   const pieData = positions.map((p) => ({ name: p.ticker, value: p.current }));
