@@ -17,6 +17,10 @@ export interface PdfPosition {
   profitPct: number;
   weight: number;
   live: boolean;
+  received: number;
+  monthsHeld: number;
+  totalReturn: number;
+  totalReturnPct: number;
 }
 
 export interface PdfTotals {
@@ -27,6 +31,7 @@ export interface PdfTotals {
   profit: number;
   profitPct: number;
   yieldOnCost: number;
+  received: number;
 }
 
 // Paleta WR Investe
