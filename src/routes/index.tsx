@@ -109,6 +109,10 @@ function Dashboard() {
                       profitPct: p.profitPct,
                       weight: p.weight,
                       live: p.live,
+                      received: p.received,
+                      monthsHeld: p.monthsHeld,
+                      totalReturn: p.totalReturn,
+                      totalReturnPct: p.totalReturnPct,
                     })),
                     {
                       invested: totals.invested,
@@ -118,6 +122,7 @@ function Dashboard() {
                       profit: totals.profit,
                       profitPct: totals.profitPct,
                       yieldOnCost: totals.yieldOnCost,
+                      received: totals.received,
                     }
                   )
                 }
