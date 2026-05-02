@@ -43,16 +43,15 @@ const PIE_COLORS = [
   "oklch(0.65 0.22 350)",
 ];
 
-function buildGrowthSeries(invested: number, current: number) {
-  // Série suave 12 meses do investido até o atual
-  const points = 12;
+function buildIncomeProjection(monthly: number, alreadyReceived: number) {
+  // Próximos 12 meses de renda acumulada (a partir do que já foi recebido)
+  const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const today = new Date();
   const out: { m: string; v: number }[] = [];
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  for (let i = 0; i < points; i++) {
-    const t = i / (points - 1);
-    const eased = 1 - Math.pow(1 - t, 2.2);
-    const wiggle = 1 + Math.sin(i * 1.3) * 0.012;
-    out.push({ m: months[i], v: (invested + (current - invested) * eased) * wiggle });
+  out.push({ m: "Hoje", v: alreadyReceived });
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    out.push({ m: monthsLabels[d.getMonth()], v: alreadyReceived + monthly * i });
   }
   return out;
 }
@@ -62,8 +61,8 @@ function Dashboard() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   const series = useMemo(
-    () => buildGrowthSeries(totals.invested || 1, totals.current || 1),
-    [totals.invested, totals.current]
+    () => buildIncomeProjection(totals.monthly || 0, totals.received || 0),
+    [totals.monthly, totals.received]
   );
 
   const pieData = positions.map((p) => ({ name: p.ticker, value: p.current }));
@@ -110,6 +109,10 @@ function Dashboard() {
                       profitPct: p.profitPct,
                       weight: p.weight,
                       live: p.live,
+                      received: p.received,
+                      monthsHeld: p.monthsHeld,
+                      totalReturn: p.totalReturn,
+                      totalReturnPct: p.totalReturnPct,
                     })),
                     {
                       invested: totals.invested,
@@ -119,6 +122,7 @@ function Dashboard() {
                       profit: totals.profit,
                       profitPct: totals.profitPct,
                       yieldOnCost: totals.yieldOnCost,
+                      received: totals.received,
                     }
                   )
                 }
@@ -181,41 +185,55 @@ function Dashboard() {
             </p>
           </div>
         ) : (
-          /* Growth chart */
-          <div className="-mx-2 mt-5 h-36">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis hide domain={["dataMin", "dataMax"]} />
-                <Tooltip
-                  cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
-                  contentStyle={{
-                    background: "oklch(0.18 0 0 / 0.95)",
-                    border: "1px solid oklch(1 0 0 / 0.1)",
-                    borderRadius: 12,
-                    color: "oklch(0.985 0 0)",
-                    fontSize: 12,
-                  }}
-                  formatter={(v) => [brl(Number(v)), "Patrimônio"]}
-                  labelStyle={{ color: "oklch(0.7 0 0)" }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="v"
-                  stroke="oklch(0.78 0.22 145)"
-                  strokeWidth={2.5}
-                  fill="url(#g1)"
-                  animationDuration={1100}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <>
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Projeção de renda passiva acumulada
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Próximos 12 meses · {brl(totals.monthly)}/mês
+                </p>
+              </div>
+              <p className="text-right text-[10px] uppercase tracking-widest text-primary">
+                + {brl(totals.yearly)} em 12m
+              </p>
+            </div>
+            <div className="-mx-2 mt-3 h-36">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis hide domain={[0, "dataMax"]} />
+                  <Tooltip
+                    cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
+                    contentStyle={{
+                      background: "oklch(0.18 0 0 / 0.95)",
+                      border: "1px solid oklch(1 0 0 / 0.1)",
+                      borderRadius: 12,
+                      color: "oklch(0.985 0 0)",
+                      fontSize: 12,
+                    }}
+                    formatter={(v) => [brl(Number(v)), "Acumulado"]}
+                    labelStyle={{ color: "oklch(0.7 0 0)" }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="v"
+                    stroke="oklch(0.78 0.22 145)"
+                    strokeWidth={2.5}
+                    fill="url(#g1)"
+                    animationDuration={1100}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </>
         )}
       </motion.section>
 
@@ -229,18 +247,25 @@ function Dashboard() {
           delay={0.05}
         />
         <StatCard
+          icon={<PiggyBank className="h-4 w-4" />}
+          label="Total recebido"
+          value={brl(totals.received)}
+          tint="primary"
+          delay={0.08}
+        />
+        <StatCard
           icon={<Coins className="h-4 w-4" />}
           label="Renda mensal"
           value={brl(totals.monthly)}
           tint="primary"
-          delay={0.1}
+          delay={0.12}
         />
         <StatCard
           icon={<Calendar className="h-4 w-4" />}
           label="Renda anual"
           value={brl(totals.yearly)}
           tint="primary"
-          delay={0.15}
+          delay={0.16}
         />
         <StatCard
           icon={<PiggyBank className="h-4 w-4" />}
@@ -248,6 +273,13 @@ function Dashboard() {
           value={pct(totals.yieldOnCost)}
           tint="accent"
           delay={0.2}
+        />
+        <StatCard
+          icon={<ArrowUpRight className="h-4 w-4" />}
+          label="Variação cota"
+          value={`${totals.profit >= 0 ? "+" : ""}${pct(totals.profitPct)}`}
+          tint={totals.profit >= 0 ? "primary" : "accent"}
+          delay={0.24}
         />
       </section>
 

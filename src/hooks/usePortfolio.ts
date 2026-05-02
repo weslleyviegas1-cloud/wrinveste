@@ -8,6 +8,7 @@ export interface Position {
   ticker: string;
   shares: number;
   avgPrice: number;
+  purchasedAt?: string; // ISO date — quando a posição foi criada
 }
 
 const KEY = "fii.portfolio.v1";
@@ -49,7 +50,7 @@ export function usePortfolio() {
       // Carrega da nuvem
       const { data, error } = await supabase
         .from("positions")
-        .select("ticker, shares, avg_price")
+        .select("ticker, shares, avg_price, created_at")
         .order("ticker");
 
       if (cancelled) return;
@@ -61,10 +62,11 @@ export function usePortfolio() {
         return;
       }
 
-      const cloud: Position[] = (data ?? []).map((r) => ({
+      const cloud: Position[] = (data ?? []).map((r: any) => ({
         ticker: r.ticker,
         shares: Number(r.shares),
         avgPrice: Number(r.avg_price),
+        purchasedAt: r.created_at ?? undefined,
       }));
 
       // Se nuvem vazia e há dados locais, faz upload (migração inicial)
@@ -115,9 +117,10 @@ export function usePortfolio() {
         nextShares = total;
         nextAvg = total > 0 ? (existing.shares * existing.avgPrice + shares * avgPrice) / total : avgPrice;
       }
+      const nowIso = new Date().toISOString();
       const next = existing
         ? positions.map((p) => (p.ticker === t ? { ...p, shares: nextShares, avgPrice: nextAvg } : p))
-        : [...positions, { ticker: t, shares: nextShares, avgPrice: nextAvg }];
+        : [...positions, { ticker: t, shares: nextShares, avgPrice: nextAvg, purchasedAt: nowIso }];
 
       setPositions(next);
 
@@ -170,12 +173,12 @@ export function usePortfolio() {
   const { quotes, loading: quotesLoading, error: quotesError, updatedAt: quotesUpdatedAt, refresh: refreshQuotes } =
     useQuotes(tickers);
 
+  const now = Date.now();
   const enriched = positions
     .map((p) => {
       const fii = getFII(p.ticker);
       if (!fii) return null;
       const live = quotes[p.ticker];
-      // Usa cotação ao vivo quando disponível, senão fallback para mock
       const price = live?.price ?? fii.price;
       const lastDiv = live?.lastDividend ?? fii.lastDividend;
       const monthlyAvg = live?.monthlyDividend ?? fii.lastDividend;
@@ -188,6 +191,17 @@ export function usePortfolio() {
       const yearlyDividend = monthlyDividend * 12;
       const profit = current - invested;
       const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
+
+      // Proventos já recebidos desde a compra (meses inteiros)
+      let monthsHeld = 0;
+      if (p.purchasedAt) {
+        const ms = now - new Date(p.purchasedAt).getTime();
+        monthsHeld = Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24 * 30.4375)));
+      }
+      const received = monthlyDividend * monthsHeld;
+      const totalReturn = profit + received;
+      const totalReturnPct = invested > 0 ? (totalReturn / invested) * 100 : 0;
+
       return {
         ...p,
         fii: { ...fii, price, lastDividend: lastDiv, dividendYield: dy },
@@ -197,6 +211,10 @@ export function usePortfolio() {
         yearlyDividend,
         profit,
         profitPct,
+        received,
+        monthsHeld,
+        totalReturn,
+        totalReturnPct,
         live: !!live,
         change,
       };
@@ -210,6 +228,10 @@ export function usePortfolio() {
       yearlyDividend: number;
       profit: number;
       profitPct: number;
+      received: number;
+      monthsHeld: number;
+      totalReturn: number;
+      totalReturnPct: number;
       live: boolean;
       change: number;
     }
@@ -220,9 +242,10 @@ export function usePortfolio() {
       acc.invested += p.invested;
       acc.current += p.current;
       acc.monthly += p.monthlyDividend;
+      acc.received += p.received;
       return acc;
     },
-    { invested: 0, current: 0, monthly: 0 }
+    { invested: 0, current: 0, monthly: 0, received: 0 }
   );
 
   const profit = totals.current - totals.invested;

@@ -17,6 +17,10 @@ export interface PdfPosition {
   profitPct: number;
   weight: number;
   live: boolean;
+  received: number;
+  monthsHeld: number;
+  totalReturn: number;
+  totalReturnPct: number;
 }
 
 export interface PdfTotals {
@@ -27,6 +31,7 @@ export interface PdfTotals {
   profit: number;
   profitPct: number;
   yieldOnCost: number;
+  received: number;
 }
 
 // Paleta WR Investe
@@ -161,19 +166,20 @@ export function exportPortfolioPdf(positions: PdfPosition[], totals: PdfTotals) 
     brl(p.current),
     `${p.profit >= 0 ? "+" : ""}${pct(p.profitPct)}`,
     brl(p.monthlyDividend),
+    brl(p.received),
     pct(p.weight, 1),
   ]);
 
   autoTable(doc, {
     startY: tableStartY + 10,
-    head: [["Ticker", "Segmento", "Cotas", "P. médio", "Atual", "Investido", "Valor", "Result.", "DY/mês", "Peso"]],
+    head: [["Ticker", "Segmento", "Cotas", "P. médio", "Atual", "Investido", "Valor", "Result.", "DY/mês", "Recebido", "Peso"]],
     body: rows,
     theme: "plain",
     styles: {
       font: "helvetica",
-      fontSize: 8.5,
+      fontSize: 8,
       textColor: C.text,
-      cellPadding: { top: 7, right: 6, bottom: 7, left: 6 },
+      cellPadding: { top: 6, right: 5, bottom: 6, left: 5 },
       lineColor: C.border,
       lineWidth: 0.3,
     },
@@ -181,7 +187,7 @@ export function exportPortfolioPdf(positions: PdfPosition[], totals: PdfTotals) 
       fillColor: [30, 36, 46],
       textColor: C.muted,
       fontStyle: "bold",
-      fontSize: 7.5,
+      fontSize: 7,
       halign: "center",
     },
     bodyStyles: { fillColor: C.card },
@@ -195,7 +201,8 @@ export function exportPortfolioPdf(positions: PdfPosition[], totals: PdfTotals) 
       6: { halign: "right" },
       7: { halign: "right" },
       8: { halign: "right", textColor: C.primary },
-      9: { halign: "right" },
+      9: { halign: "right", textColor: C.primary },
+      10: { halign: "right" },
     },
     didParseCell: (data) => {
       if (data.section === "body" && data.column.index === 7) {
