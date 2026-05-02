@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { FIIS, getFII } from "@/data/fiis";
 import { brl, num, pct } from "@/lib/format";
+import { useQuotes } from "@/hooks/useQuotes";
 
 export const Route = createFileRoute("/carteira")({
   head: () => ({
@@ -29,11 +30,15 @@ function Carteira() {
   const [cotas, setCotas] = useState("");
   const [precoMedio, setPrecoMedio] = useState("");
 
+  // Cotação ao vivo do ticker selecionado no modal
+  const { quotes: liveQuotes, loading: liveLoading } = useQuotes(open ? [ticker] : []);
+  const livePrice = liveQuotes[ticker]?.price;
+
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     const fii = getFII(ticker);
     if (!fii) return;
-    const price = parseFloat(precoMedio) || fii.price;
+    const price = parseFloat(precoMedio) || livePrice || fii.price;
     let shares = 0;
     if (mode === "valor") {
       const v = parseFloat(valor);
@@ -239,13 +244,24 @@ function Carteira() {
               )}
 
               <Field
-                label={`Preço médio (opcional · atual ${brl(getFII(ticker)?.price ?? 0)})`}
+                label={`Preço médio (opcional · ${
+                  liveLoading && !livePrice
+                    ? "buscando..."
+                    : livePrice
+                    ? `ao vivo ${brl(livePrice)}`
+                    : `ref. ${brl(getFII(ticker)?.price ?? 0)}`
+                })`}
                 type="number"
                 step="0.01"
                 value={precoMedio}
                 onChange={setPrecoMedio}
-                placeholder="auto"
+                placeholder={livePrice ? livePrice.toFixed(2) : "auto"}
               />
+              {mode === "valor" && valor && (livePrice || getFII(ticker)?.price) ? (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  ≈ {num((parseFloat(valor) || 0) / (parseFloat(precoMedio) || livePrice || getFII(ticker)!.price), 4)} cotas
+                </p>
+              ) : null}
 
               <button
                 type="submit"
