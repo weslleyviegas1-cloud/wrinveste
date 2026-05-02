@@ -242,18 +242,25 @@ function Dashboard() {
           delay={0.05}
         />
         <StatCard
+          icon={<PiggyBank className="h-4 w-4" />}
+          label="Total recebido"
+          value={brl(totals.received)}
+          tint="primary"
+          delay={0.08}
+        />
+        <StatCard
           icon={<Coins className="h-4 w-4" />}
           label="Renda mensal"
           value={brl(totals.monthly)}
           tint="primary"
-          delay={0.1}
+          delay={0.12}
         />
         <StatCard
           icon={<Calendar className="h-4 w-4" />}
           label="Renda anual"
           value={brl(totals.yearly)}
           tint="primary"
-          delay={0.15}
+          delay={0.16}
         />
         <StatCard
           icon={<PiggyBank className="h-4 w-4" />}
@@ -261,6 +268,13 @@ function Dashboard() {
           value={pct(totals.yieldOnCost)}
           tint="accent"
           delay={0.2}
+        />
+        <StatCard
+          icon={<ArrowUpRight className="h-4 w-4" />}
+          label="Variação cota"
+          value={`${totals.profit >= 0 ? "+" : ""}${pct(totals.profitPct)}`}
+          tint={totals.profit >= 0 ? "primary" : "accent"}
+          delay={0.24}
         />
       </section>
 
