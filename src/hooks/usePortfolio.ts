@@ -117,9 +117,10 @@ export function usePortfolio() {
         nextShares = total;
         nextAvg = total > 0 ? (existing.shares * existing.avgPrice + shares * avgPrice) / total : avgPrice;
       }
+      const nowIso = new Date().toISOString();
       const next = existing
         ? positions.map((p) => (p.ticker === t ? { ...p, shares: nextShares, avgPrice: nextAvg } : p))
-        : [...positions, { ticker: t, shares: nextShares, avgPrice: nextAvg }];
+        : [...positions, { ticker: t, shares: nextShares, avgPrice: nextAvg, purchasedAt: nowIso }];
 
       setPositions(next);
 
