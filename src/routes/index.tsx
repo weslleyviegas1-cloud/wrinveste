@@ -12,11 +12,12 @@ import {
   Cell,
 } from "recharts";
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Coins, Wallet, PiggyBank, Calendar, Radio, RefreshCw } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Coins, Wallet, PiggyBank, Calendar, Radio, RefreshCw, FileDown } from "lucide-react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { brl, pct } from "@/lib/format";
+import { exportPortfolioPdf } from "@/lib/exportPdf";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -89,14 +90,54 @@ function Dashboard() {
               {quotesError ? "Sem conexão" : updatedLabel ? `Cotações ao vivo · ${updatedLabel}` : "Buscando cotações..."}
             </span>
           </div>
-          <button
-            onClick={() => refreshQuotes()}
-            className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/5 transition"
-            aria-label="Atualizar cotações"
-          >
-            <RefreshCw className={`h-3 w-3 ${quotesLoading ? "animate-spin" : ""}`} />
-            <span>Atualizar</span>
-          </button>
+          <div className="flex items-center gap-1">
+            {positions.length > 0 && (
+              <button
+                onClick={() =>
+                  exportPortfolioPdf(
+                    positions.map((p) => ({
+                      ticker: p.ticker,
+                      name: p.fii.name,
+                      segment: p.fii.segment,
+                      shares: p.shares,
+                      avgPrice: p.avgPrice,
+                      price: p.fii.price,
+                      invested: p.invested,
+                      current: p.current,
+                      monthlyDividend: p.monthlyDividend,
+                      yearlyDividend: p.yearlyDividend,
+                      profit: p.profit,
+                      profitPct: p.profitPct,
+                      weight: p.weight,
+                      live: p.live,
+                    })),
+                    {
+                      invested: totals.invested,
+                      current: totals.current,
+                      monthly: totals.monthly,
+                      yearly: totals.yearly,
+                      profit: totals.profit,
+                      profitPct: totals.profitPct,
+                      yieldOnCost: totals.yieldOnCost,
+                    }
+                  )
+                }
+                className="flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-primary hover:bg-primary/25 transition"
+                aria-label="Exportar relatório PDF"
+              >
+                <FileDown className="h-3 w-3" />
+                <span>PDF</span>
+              </button>
+            )}
+            <button
+              onClick={() => refreshQuotes()}
+              className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/5 transition"
+              aria-label="Atualizar cotações"
+            >
+              <RefreshCw className={`h-3 w-3 ${quotesLoading ? "animate-spin" : ""}`} />
+              <span>Atualizar</span>
+            </button>
+          </div>
         </div>
       )}
 
