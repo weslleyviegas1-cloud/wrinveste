@@ -180,41 +180,55 @@ function Dashboard() {
             </p>
           </div>
         ) : (
-          /* Growth chart */
-          <div className="-mx-2 mt-5 h-36">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis hide domain={["dataMin", "dataMax"]} />
-                <Tooltip
-                  cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
-                  contentStyle={{
-                    background: "oklch(0.18 0 0 / 0.95)",
-                    border: "1px solid oklch(1 0 0 / 0.1)",
-                    borderRadius: 12,
-                    color: "oklch(0.985 0 0)",
-                    fontSize: 12,
-                  }}
-                  formatter={(v) => [brl(Number(v)), "Patrimônio"]}
-                  labelStyle={{ color: "oklch(0.7 0 0)" }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="v"
-                  stroke="oklch(0.78 0.22 145)"
-                  strokeWidth={2.5}
-                  fill="url(#g1)"
-                  animationDuration={1100}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <>
+            <div className="mt-5 flex items-end justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Projeção de renda passiva acumulada
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Próximos 12 meses · {brl(totals.monthly)}/mês
+                </p>
+              </div>
+              <p className="text-right text-[10px] uppercase tracking-widest text-primary">
+                + {brl(totals.yearly)} em 12m
+              </p>
+            </div>
+            <div className="-mx-2 mt-3 h-36">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis hide domain={[0, "dataMax"]} />
+                  <Tooltip
+                    cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
+                    contentStyle={{
+                      background: "oklch(0.18 0 0 / 0.95)",
+                      border: "1px solid oklch(1 0 0 / 0.1)",
+                      borderRadius: 12,
+                      color: "oklch(0.985 0 0)",
+                      fontSize: 12,
+                    }}
+                    formatter={(v) => [brl(Number(v)), "Acumulado"]}
+                    labelStyle={{ color: "oklch(0.7 0 0)" }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="v"
+                    stroke="oklch(0.78 0.22 145)"
+                    strokeWidth={2.5}
+                    fill="url(#g1)"
+                    animationDuration={1100}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </>
         )}
       </motion.section>
 
