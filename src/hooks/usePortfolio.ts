@@ -8,6 +8,7 @@ export interface Position {
   ticker: string;
   shares: number;
   avgPrice: number;
+  purchasedAt?: string; // ISO date — quando a posição foi criada
 }
 
 const KEY = "fii.portfolio.v1";
@@ -49,7 +50,7 @@ export function usePortfolio() {
       // Carrega da nuvem
       const { data, error } = await supabase
         .from("positions")
-        .select("ticker, shares, avg_price")
+        .select("ticker, shares, avg_price, created_at")
         .order("ticker");
 
       if (cancelled) return;
@@ -61,10 +62,11 @@ export function usePortfolio() {
         return;
       }
 
-      const cloud: Position[] = (data ?? []).map((r) => ({
+      const cloud: Position[] = (data ?? []).map((r: any) => ({
         ticker: r.ticker,
         shares: Number(r.shares),
         avgPrice: Number(r.avg_price),
+        purchasedAt: r.created_at ?? undefined,
       }));
 
       // Se nuvem vazia e há dados locais, faz upload (migração inicial)
