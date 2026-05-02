@@ -166,6 +166,7 @@ export function exportPortfolioPdf(positions: PdfPosition[], totals: PdfTotals) 
     brl(p.current),
     `${p.profit >= 0 ? "+" : ""}${pct(p.profitPct)}`,
     brl(p.monthlyDividend),
+    brl(p.received),
     pct(p.weight, 1),
   ]);
 
