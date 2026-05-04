@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Wallet, ListOrdered, Calculator } from "lucide-react";
+import { LayoutDashboard, Wallet, ListOrdered, Calculator, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 const items = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/carteira", label: "Carteira", icon: Wallet },
+  { to: "/recomendacoes", label: "Investir", icon: Sparkles },
   { to: "/fundos", label: "Fundos", icon: ListOrdered },
   { to: "/simulador", label: "Simular", icon: Calculator },
 ] as const;
