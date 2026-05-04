@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SimuladorRouteImport } from './routes/simulador'
+import { Route as RecomendacoesRouteImport } from './routes/recomendacoes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FundosRouteImport } from './routes/fundos'
 import { Route as CarteiraRouteImport } from './routes/carteira'
@@ -18,6 +19,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const SimuladorRoute = SimuladorRouteImport.update({
   id: '/simulador',
   path: '/simulador',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecomendacoesRoute = RecomendacoesRouteImport.update({
+  id: '/recomendacoes',
+  path: '/recomendacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
   '/login': typeof LoginRoute
+  '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
   '/login': typeof LoginRoute
+  '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,28 @@ export interface FileRoutesById {
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
   '/login': typeof LoginRoute
+  '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/carteira' | '/fundos' | '/login' | '/simulador'
+  fullPaths:
+    | '/'
+    | '/carteira'
+    | '/fundos'
+    | '/login'
+    | '/recomendacoes'
+    | '/simulador'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/carteira' | '/fundos' | '/login' | '/simulador'
-  id: '__root__' | '/' | '/carteira' | '/fundos' | '/login' | '/simulador'
+  to: '/' | '/carteira' | '/fundos' | '/login' | '/recomendacoes' | '/simulador'
+  id:
+    | '__root__'
+    | '/'
+    | '/carteira'
+    | '/fundos'
+    | '/login'
+    | '/recomendacoes'
+    | '/simulador'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +98,7 @@ export interface RootRouteChildren {
   CarteiraRoute: typeof CarteiraRoute
   FundosRoute: typeof FundosRoute
   LoginRoute: typeof LoginRoute
+  RecomendacoesRoute: typeof RecomendacoesRoute
   SimuladorRoute: typeof SimuladorRoute
 }
 
@@ -86,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/simulador'
       fullPath: '/simulador'
       preLoaderRoute: typeof SimuladorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recomendacoes': {
+      id: '/recomendacoes'
+      path: '/recomendacoes'
+      fullPath: '/recomendacoes'
+      preLoaderRoute: typeof RecomendacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -124,8 +154,18 @@ const rootRouteChildren: RootRouteChildren = {
   CarteiraRoute: CarteiraRoute,
   FundosRoute: FundosRoute,
   LoginRoute: LoginRoute,
+  RecomendacoesRoute: RecomendacoesRoute,
   SimuladorRoute: SimuladorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

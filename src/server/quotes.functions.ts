@@ -68,9 +68,13 @@ async function fetchFromYahoo(ticker: string): Promise<Quote | null> {
     .filter((d) => Number.isFinite(d?.amount) && d.amount > 0 && d.date >= oneYearAgo)
     .sort((a, b) => b.date - a.date);
 
-  const yearlyDividend = list.reduce((a, b) => a + Number(b.amount), 0);
-  const monthlyDividend = list.length > 0 ? yearlyDividend / 12 : 0;
-  const lastDividend = Number(list[0]?.amount ?? monthlyDividend ?? 0);
+  const sumLast12 = list.reduce((a, b) => a + Number(b.amount), 0);
+  const avgLast12 = list.length > 0 ? sumLast12 / 12 : 0;
+  const lastDividend = Number(list[0]?.amount ?? avgLast12 ?? 0);
+  // Regra: usar SEMPRE o último dividendo real como base mensal.
+  // Se diferença > 5% para a média, prevalece o último (já é o default aqui).
+  const monthlyDividend = lastDividend > 0 ? lastDividend : avgLast12;
+  const yearlyDividend = monthlyDividend * 12;
   const dividendYield = price > 0 ? (yearlyDividend / price) * 100 : 0;
 
   return {
@@ -90,68 +94,9 @@ async function fetchFromYahoo(ticker: string): Promise<Quote | null> {
   };
 }
 
-async function fetchFromBrapi(ticker: string, token: string): Promise<Quote | null> {
-  const url = new URL(`https://brapi.dev/api/quote/${ticker}`);
-  url.searchParams.set("range", "1d");
-  url.searchParams.set("interval", "1d");
-  url.searchParams.set("dividends", "true");
-  url.searchParams.set("token", token);
-
-  let res: Response;
-  try {
-    res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
-  } catch (e) {
-    console.error(`[quotes] brapi network ${ticker}`, e);
-    return null;
-  }
-  if (!res.ok) {
-    console.warn(`[quotes] brapi ${ticker} http ${res.status}`);
-    return null;
-  }
-  const data: any = await res.json().catch(() => null);
-  const r = data?.results?.[0];
-  if (!r || typeof r.regularMarketPrice !== "number") return null;
-
-  const cashDividends: Array<{ paymentDate?: string; rate?: number }> =
-    r?.dividendsData?.cashDividends ?? [];
-  const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
-  const last12 = cashDividends
-    .filter((d) => d?.paymentDate && new Date(d.paymentDate).getTime() >= oneYearAgo)
-    .map((d) => Number(d.rate ?? 0))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  const yearlyDividend = last12.reduce((a, b) => a + b, 0);
-  const monthlyDividend = last12.length > 0 ? yearlyDividend / 12 : 0;
-  const sorted = [...cashDividends].sort(
-    (a, b) => new Date(b.paymentDate ?? 0).getTime() - new Date(a.paymentDate ?? 0).getTime()
-  );
-  const lastDividend = Number(sorted[0]?.rate ?? monthlyDividend ?? 0);
-  const price = Number(r.regularMarketPrice);
-
-  return {
-    ticker: ticker.toUpperCase(),
-    price,
-    change: Number(r.regularMarketChangePercent ?? 0),
-    prevClose: Number(r.regularMarketPreviousClose ?? price),
-    currency: String(r.currency ?? "BRL"),
-    shortName: r.shortName,
-    longName: r.longName,
-    lastDividend,
-    monthlyDividend,
-    yearlyDividend,
-    dividendYield: price > 0 ? (yearlyDividend / price) * 100 : 0,
-    updatedAt: new Date().toISOString(),
-    source: "brapi.dev",
-  };
-}
-
 async function fetchOne(ticker: string): Promise<Quote | null> {
-  const token = process.env.BRAPI_TOKEN;
-  // Yahoo é primário (sem token, suporta FIIs brasileiros via .SA)
-  const y = await fetchFromYahoo(ticker);
-  if (y) return y;
-  // Fallback brapi se houver token configurado
-  if (token) return fetchFromBrapi(ticker, token);
-  return null;
+  // Yahoo Finance é a única fonte (sem necessidade de token).
+  return fetchFromYahoo(ticker);
 }
 
 export const getQuotes = createServerFn({ method: "POST" })
