@@ -68,9 +68,13 @@ async function fetchFromYahoo(ticker: string): Promise<Quote | null> {
     .filter((d) => Number.isFinite(d?.amount) && d.amount > 0 && d.date >= oneYearAgo)
     .sort((a, b) => b.date - a.date);
 
-  const yearlyDividend = list.reduce((a, b) => a + Number(b.amount), 0);
-  const monthlyDividend = list.length > 0 ? yearlyDividend / 12 : 0;
-  const lastDividend = Number(list[0]?.amount ?? monthlyDividend ?? 0);
+  const sumLast12 = list.reduce((a, b) => a + Number(b.amount), 0);
+  const avgLast12 = list.length > 0 ? sumLast12 / 12 : 0;
+  const lastDividend = Number(list[0]?.amount ?? avgLast12 ?? 0);
+  // Regra: usar SEMPRE o último dividendo real como base mensal.
+  // Se diferença > 5% para a média, prevalece o último (já é o default aqui).
+  const monthlyDividend = lastDividend > 0 ? lastDividend : avgLast12;
+  const yearlyDividend = monthlyDividend * 12;
   const dividendYield = price > 0 ? (yearlyDividend / price) * 100 : 0;
 
   return {
@@ -119,12 +123,14 @@ async function fetchFromBrapi(ticker: string, token: string): Promise<Quote | nu
     .filter((d) => d?.paymentDate && new Date(d.paymentDate).getTime() >= oneYearAgo)
     .map((d) => Number(d.rate ?? 0))
     .filter((n) => Number.isFinite(n) && n > 0);
-  const yearlyDividend = last12.reduce((a, b) => a + b, 0);
-  const monthlyDividend = last12.length > 0 ? yearlyDividend / 12 : 0;
+  const sumLast12 = last12.reduce((a, b) => a + b, 0);
+  const avgLast12 = last12.length > 0 ? sumLast12 / 12 : 0;
   const sorted = [...cashDividends].sort(
     (a, b) => new Date(b.paymentDate ?? 0).getTime() - new Date(a.paymentDate ?? 0).getTime()
   );
-  const lastDividend = Number(sorted[0]?.rate ?? monthlyDividend ?? 0);
+  const lastDividend = Number(sorted[0]?.rate ?? avgLast12 ?? 0);
+  const monthlyDividend = lastDividend > 0 ? lastDividend : avgLast12;
+  const yearlyDividend = monthlyDividend * 12;
   const price = Number(r.regularMarketPrice);
 
   return {
