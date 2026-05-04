@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Radio, RefreshCw } from "lucide-react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { FIIS, TYPE_LABEL, type FII } from "@/data/fiis";
 import { brl, pct } from "@/lib/format";
+import { useQuotes } from "@/hooks/useQuotes";
 
 export const Route = createFileRoute("/fundos")({
   head: () => ({
@@ -26,13 +27,20 @@ const filters: { id: Filter; label: string }[] = [
   { id: "menorRisco", label: "Menor risco" },
 ];
 
-function sortBy(list: FII[], filter: Filter) {
+interface EnrichedFII extends FII {
+  livePrice: number;
+  liveDividend: number;
+  liveDY: number;
+  isLive: boolean;
+}
+
+function sortBy(list: EnrichedFII[], filter: Filter) {
   const arr = [...list];
   switch (filter) {
     case "score":
       return arr.sort((a, b) => b.score - a.score);
     case "yield":
-      return arr.sort((a, b) => b.dividendYield - a.dividendYield);
+      return arr.sort((a, b) => b.liveDY - a.liveDY);
     case "estabilidade":
       return arr.sort((a, b) => b.consistency - a.consistency);
     case "menorRisco":
@@ -52,22 +60,58 @@ function scoreBar(score: number) {
   return "bg-danger";
 }
 
+const ALL_TICKERS = FIIS.map((f) => f.ticker);
+
 function Fundos() {
   const [filter, setFilter] = useState<Filter>("score");
   const [q, setQ] = useState("");
+  const { quotes, loading, updatedAt, refresh } = useQuotes(ALL_TICKERS);
+
+  const enriched: EnrichedFII[] = useMemo(
+    () =>
+      FIIS.map((f) => {
+        const live = quotes[f.ticker];
+        const livePrice = live?.price ?? f.price;
+        const liveDividend = live?.lastDividend ?? f.lastDividend;
+        const liveDY = livePrice > 0 ? ((liveDividend * 12) / livePrice) * 100 : f.dividendYield;
+        return { ...f, livePrice, liveDividend, liveDY, isLive: !!live };
+      }),
+    [quotes]
+  );
 
   const list = useMemo(() => {
-    const filtered = FIIS.filter(
+    const filtered = enriched.filter(
       (f) =>
         f.ticker.toLowerCase().includes(q.toLowerCase()) ||
         f.name.toLowerCase().includes(q.toLowerCase())
     );
     return sortBy(filtered, filter);
-  }, [filter, q]);
+  }, [enriched, filter, q]);
 
+  const updatedLabel = updatedAt
+    ? new Date(updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : null;
   return (
     <div className="px-5 sm:px-8">
       <AppHeader title="Fundos" subtitle={`${FIIS.length} FIIs analisados`} />
+
+      <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-60 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+          </span>
+          <Radio className="h-3 w-3" />
+          <span>{updatedLabel ? `Cotações ao vivo · ${updatedLabel}` : "Buscando cotações..."}</span>
+        </div>
+        <button
+          onClick={() => refresh()}
+          className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/5 transition"
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          <span>Atualizar</span>
+        </button>
+      </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -113,23 +157,32 @@ function Fundos() {
                     {TYPE_LABEL[f.type]}
                   </span>
                   <span className="text-[11px] text-muted-foreground">· {f.segment}</span>
+                  {f.isLive && (
+                    <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-primary">
+                      Live
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{f.name}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Preço</p>
-                <p className="text-sm font-semibold tabular">{brl(f.price)}</p>
+                <p className="text-sm font-semibold tabular">{brl(f.livePrice)}</p>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-3">
+            <div className="mt-3 grid grid-cols-4 gap-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">DY anual</p>
-                <p className="text-sm font-semibold tabular text-primary">{pct(f.dividendYield)}</p>
+                <p className="text-sm font-semibold tabular text-primary">{pct(f.liveDY)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Consistência</p>
-                <p className="text-sm font-semibold tabular">{f.consistency.toFixed(1)}/10</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pgto/mês</p>
+                <p className="text-sm font-semibold tabular text-primary">{brl(f.liveDividend)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Consist.</p>
+                <p className="text-sm font-semibold tabular">{f.consistency.toFixed(1)}</p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Score</p>
@@ -152,8 +205,8 @@ function Fundos() {
       </section>
 
       <p className="mt-6 text-[11px] leading-relaxed text-muted-foreground">
-        * Score calculado a partir de dividend yield, consistência histórica e volatilidade. Dados
-        ilustrativos para fins de estudo. Não é recomendação de investimento.
+        * Preços e dividendos via Yahoo Finance em tempo real (último pagamento real). 
+        Score calculado a partir de DY, consistência histórica e volatilidade. Não é recomendação de investimento.
       </p>
     </div>
   );
