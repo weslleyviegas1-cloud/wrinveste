@@ -21,7 +21,7 @@ const InputSchema = z.object({
   tickers: z
     .array(z.string().min(3).max(8).regex(/^[A-Z0-9]+$/))
     .min(1)
-    .max(50),
+    .max(600),
 });
 
 // Cache 5min (Yahoo rate-limits Worker IPs aggressively)
