@@ -21,7 +21,7 @@ const InputSchema = z.object({
   tickers: z
     .array(z.string().min(3).max(8).regex(/^[A-Z0-9]+$/))
     .min(1)
-    .max(50),
+    .max(600),
 });
 
 // Cache 5min (Yahoo rate-limits Worker IPs aggressively)
@@ -114,7 +114,17 @@ export const getQuotes = createServerFn({ method: "POST" })
       }
     }
 
-    const results = await Promise.all(toFetch.map((t) => fetchOne(t)));
+    // Limita concorrência para não sobrecarregar Yahoo (rate limit)
+    const CONCURRENCY = 8;
+    const results: (Quote | null)[] = new Array(toFetch.length);
+    let cursor = 0;
+    async function worker() {
+      while (cursor < toFetch.length) {
+        const i = cursor++;
+        results[i] = await fetchOne(toFetch[i]);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, toFetch.length) }, worker));
     results.forEach((q, i) => {
       const T = toFetch[i];
       if (q) {
@@ -122,7 +132,6 @@ export const getQuotes = createServerFn({ method: "POST" })
         staleCache.set(T, q);
         out[T] = q;
       } else {
-        // Fallback: serve last known quote so UI never reverts to mock data
         const stale = staleCache.get(T);
         if (stale) out[T] = stale;
       }
