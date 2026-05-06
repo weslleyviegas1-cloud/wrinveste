@@ -24,46 +24,44 @@ const InputSchema = z.object({
     .max(50),
 });
 
-// Cache 60s
+// Cache 5min (Yahoo rate-limits Worker IPs aggressively)
 type CacheEntry = { quote: Quote; expiresAt: number };
 const cache = new Map<string, CacheEntry>();
-const TTL_MS = 60_000;
+const TTL_MS = 5 * 60_000;
+// Stale fallback: serve last known quote if fresh fetch fails
+const staleCache = new Map<string, Quote>();
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
-async function fetchFromYahoo(ticker: string): Promise<Quote | null> {
-  // FIIs brasileiros: sufixo .SA
+async function fetchYahooHost(ticker: string, host: "query1" | "query2"): Promise<Quote | null> {
   const symbol = `${ticker}.SA`;
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1mo&range=1y&events=div`;
+  const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1mo&range=1y&events=div`;
 
   let res: Response;
   try {
     res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" } });
   } catch (e) {
-    console.error(`[quotes] yahoo network ${ticker}`, e);
+    console.error(`[quotes] yahoo ${host} network ${ticker}`, e);
     return null;
   }
   if (!res.ok) {
-    console.warn(`[quotes] yahoo ${ticker} http ${res.status}`);
+    console.warn(`[quotes] yahoo ${host} ${ticker} http ${res.status}`);
     return null;
   }
 
   const data: any = await res.json().catch(() => null);
   const r = data?.chart?.result?.[0];
   const meta = r?.meta;
-  if (!r || !meta || typeof meta.regularMarketPrice !== "number") {
-    return null;
-  }
+  if (!r || !meta || typeof meta.regularMarketPrice !== "number") return null;
 
   const price = Number(meta.regularMarketPrice);
   const prevClose = Number(meta.chartPreviousClose ?? price);
   const change = prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0;
 
-  // Dividendos dos últimos 12 meses
   const divs: Record<string, { amount: number; date: number }> = r?.events?.dividends ?? {};
-  const now = Math.floor(Date.now() / 1000);
-  const oneYearAgo = now - 365 * 24 * 60 * 60;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const oneYearAgo = nowSec - 365 * 24 * 60 * 60;
   const list = Object.values(divs)
     .filter((d) => Number.isFinite(d?.amount) && d.amount > 0 && d.date >= oneYearAgo)
     .sort((a, b) => b.date - a.date);
@@ -71,8 +69,6 @@ async function fetchFromYahoo(ticker: string): Promise<Quote | null> {
   const sumLast12 = list.reduce((a, b) => a + Number(b.amount), 0);
   const avgLast12 = list.length > 0 ? sumLast12 / 12 : 0;
   const lastDividend = Number(list[0]?.amount ?? avgLast12 ?? 0);
-  // Regra: usar SEMPRE o último dividendo real como base mensal.
-  // Se diferença > 5% para a média, prevalece o último (já é o default aqui).
   const monthlyDividend = lastDividend > 0 ? lastDividend : avgLast12;
   const yearlyDividend = monthlyDividend * 12;
   const dividendYield = price > 0 ? (yearlyDividend / price) * 100 : 0;
@@ -90,13 +86,15 @@ async function fetchFromYahoo(ticker: string): Promise<Quote | null> {
     yearlyDividend,
     dividendYield,
     updatedAt: new Date().toISOString(),
-    source: "yahoo",
+    source: `yahoo:${host}`,
   };
 }
 
 async function fetchOne(ticker: string): Promise<Quote | null> {
-  // Yahoo Finance é a única fonte (sem necessidade de token).
-  return fetchFromYahoo(ticker);
+  // Try query1, fallback to query2 (different IP/rate-limit pool)
+  const a = await fetchYahooHost(ticker, "query1");
+  if (a) return a;
+  return fetchYahooHost(ticker, "query2");
 }
 
 export const getQuotes = createServerFn({ method: "POST" })
@@ -121,9 +119,15 @@ export const getQuotes = createServerFn({ method: "POST" })
       const T = toFetch[i];
       if (q) {
         cache.set(T, { quote: q, expiresAt: Date.now() + TTL_MS });
+        staleCache.set(T, q);
         out[T] = q;
+      } else {
+        // Fallback: serve last known quote so UI never reverts to mock data
+        const stale = staleCache.get(T);
+        if (stale) out[T] = stale;
       }
     });
 
     return { quotes: out, fetchedAt: new Date().toISOString() };
   });
+
