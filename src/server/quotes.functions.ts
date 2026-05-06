@@ -24,10 +24,12 @@ const InputSchema = z.object({
     .max(50),
 });
 
-// Cache 60s
+// Cache 5min (Yahoo rate-limits Worker IPs aggressively)
 type CacheEntry = { quote: Quote; expiresAt: number };
 const cache = new Map<string, CacheEntry>();
-const TTL_MS = 60_000;
+const TTL_MS = 5 * 60_000;
+// Stale fallback: serve last known quote if fresh fetch fails
+const staleCache = new Map<string, Quote>();
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
