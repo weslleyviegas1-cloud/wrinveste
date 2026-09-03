@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getQuotes, type Quote } from "@/lib/quotes.functions";
+import { getQuotes } from "@/lib/quotes.functions";
+import type { Quote } from "@/lib/quotes.types";
 
 const REFRESH_MS = 60_000; // 1 min
 const STORAGE_KEY = "fii.quotes.cache.v1";
