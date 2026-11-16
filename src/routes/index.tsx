@@ -63,7 +63,7 @@ function buildPortfolioSeries(history: PortfolioSnapshot[], range: HistoryRange)
 
 function Dashboard() {
   const { positions, totals, ready, history, quotesLoading, quotesUpdatedAt, quotesError, refreshQuotes } = usePortfolio();
-  const { totals: otherTotals, items: otherInvestments } = useTrackedInvestments();
+  const { totals: otherTotals } = useTrackedInvestments();
   const consolidatedCurrent = totals.current + otherTotals.current;
   const consolidatedInvested = totals.invested + otherTotals.invested;
   const consolidatedProfit = consolidatedCurrent - consolidatedInvested;
