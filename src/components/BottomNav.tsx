@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Wallet, ListOrdered, Calculator, Sparkles } from "lucide-react";
+import { LayoutDashboard, Wallet, ListOrdered, Calculator, Sparkles, BriefcaseBusiness } from "lucide-react";
 
 const items = [
   { to: "/", label: "Início", icon: LayoutDashboard },
   { to: "/carteira", label: "Carteira", icon: Wallet },
-  { to: "/fundos", label: "Pesquisar", icon: ListOrdered },
+  { to: "/investimentos", label: "Investir", icon: BriefcaseBusiness },
+  { to: "/fundos", label: "FIIs", icon: ListOrdered },
   { to: "/simulador", label: "Análises", icon: Calculator },
   { to: "/recomendacoes", label: "Produtos", icon: Sparkles },
 ] as const;
