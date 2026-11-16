@@ -28,7 +28,8 @@ function exportPdf(items:TrackedInvestment[], invested:number, current:number){
  doc.save("wr-investe-patrimonio-"+new Date().toISOString().slice(0,10)+".pdf");
 }
 function Patrimonio(){
- const {items,loading,error,totals,add,update,remove,cloudSynced}=useTrackedInvestments();\n const [editingId,setEditingId]=useState<string|null>(null);
+ const {items,loading,error,totals,add,update,remove,cloudSynced}=useTrackedInvestments();
+ const [editingId,setEditingId]=useState<string|null>(null);
  const [open,setOpen]=useState(false);const [form,setForm]=useState<InvestmentInput>(blank);
  const [filter,setFilter]=useState("Todas");
  const categoriesInUse=useMemo(()=>["Todas",...Array.from(new Set(items.map(x=>x.category)))],[items]);
