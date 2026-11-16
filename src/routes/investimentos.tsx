@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuotes } from "@/hooks/useQuotes";
 import {
   Search, ArrowUpRight, Landmark, Building2, BarChart3, Globe2,
   ShieldCheck, Layers3, Coins, CalendarDays, BriefcaseBusiness,
