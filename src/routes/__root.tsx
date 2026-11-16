@@ -2,7 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PWARegister } from "@/components/PWARegister";
 import { BottomNav } from "@/components/BottomNav";
-import { Home, ChartNoAxesCombined, Wallet, PieChart, Search, Calculator, Sparkles, BriefcaseBusiness } from "lucide-react";
+import { Home, Wallet, PieChart, Search, Calculator, Sparkles, BriefcaseBusiness } from "lucide-react";
 import appCss from "../styles.css?url";
 
 const navigation = [
@@ -34,6 +34,7 @@ export const Route = createRootRoute({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
@@ -56,7 +57,7 @@ function RootComponent() {
   const hideNav = pathname.startsWith("/login");
   return <AuthProvider><PWARegister />{hideNav ? <Outlet /> : <div className="wr-app-shell">
     <aside className="wr-sidebar">
-      <Link to="/" className="wr-brand" aria-label="WR Investimentos"><span>W</span><span className="wr-brand-r">R</span><ChartNoAxesCombined size={25} strokeWidth={3} /></Link>
+      <Link to="/" className="wr-brand" aria-label="WR Investimentos"><img src="/icon-512.png" alt="WR Investe" className="wr-brand-logo" /></Link>
       <nav className="wr-side-nav" aria-label="Navegação principal">
         {navigation.map((item) => { const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to); const Icon = item.icon; return <Link key={item.to} to={item.to} className={`wr-side-link ${active ? "active" : ""}`}><Icon size={21} strokeWidth={2.2} /><span>{item.label}</span></Link>; })}
       </nav>

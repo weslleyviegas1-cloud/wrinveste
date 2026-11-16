@@ -15,7 +15,7 @@ export function AppHeader({ title, subtitle }: { title: string; subtitle?: strin
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary glow-green" />
+          <img src="/icon-192.png" alt="WR Investe" className="h-7 w-7 rounded-lg shadow-[0_0_0_1px_rgba(240,196,0,0.35)]" />
           WR Investe
         </div>
         <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight sm:text-3xl truncate">
