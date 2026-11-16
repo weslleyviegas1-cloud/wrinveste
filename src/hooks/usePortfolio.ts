@@ -302,6 +302,13 @@ export function usePortfolio() {
   // Registra no máximo um ponto a cada 30 minutos, somente após uma resposta de cotação.
   useEffect(() => {
     if (!ready || !quotesUpdatedAt || positions.length === 0 || totals.current <= 0) return;
+    // Não grava patrimônio baseado em preços estáticos ou em cotações antigas.
+    const hasFreshQuotesForAll = positions.every((position) => {
+      const quote = quotes[position.ticker];
+      const age = quote ? Date.now() - Date.parse(quote.updatedAt) : Number.POSITIVE_INFINITY;
+      return Boolean(quote && Number.isFinite(age) && age >= 0 && age <= 5 * 60_000);
+    });
+    if (!hasFreshQuotesForAll) return;
     const nowMs = Date.now();
     if (nowMs - lastSnapshotAttempt.current < SNAPSHOT_INTERVAL_MS) return;
     lastSnapshotAttempt.current = nowMs;
