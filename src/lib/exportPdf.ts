@@ -80,7 +80,7 @@ export function exportPortfolioPdf(positions: PdfPosition[], totals: PdfTotals) 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...C.muted);
-  doc.text("Relatório de Carteira · Fundos Imobiliários", 90, 76);
+  doc.text("Relatório consolidado · Investimentos", 90, 76);
 
   const now = new Date();
   const dateStr = now.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
@@ -154,7 +154,7 @@ export function exportPortfolioPdf(positions: PdfPosition[], totals: PdfTotals) 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...C.muted);
-  doc.text("Cotações ao vivo via Yahoo Finance", W - 40, tableStartY, { align: "right" });
+  doc.text("Últimas cotações disponíveis", W - 40, tableStartY, { align: "right" });
 
   const rows = positions.map((p) => [
     p.ticker,
