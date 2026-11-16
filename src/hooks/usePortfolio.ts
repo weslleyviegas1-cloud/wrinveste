@@ -10,6 +10,7 @@ export interface Position {
   shares: number;
   avgPrice: number;
   purchasedAt?: string;
+  institution?: string;
 }
 export interface PortfolioPosition extends Position {
   category: AssetCategory;
@@ -40,14 +41,15 @@ const LABELS: Record<AssetCategory,string> = {
   FII:"FII",ACAO:"Ação",ETF:"ETF",BDR:"BDR",TESOURO:"Tesouro Direto",CDB:"CDB/RDB",LCI_LCA:"LCI/LCA",
   DEBENTURE:"Debênture",CRI_CRA:"CRI/CRA",FUNDO:"Fundo",PREVIDENCIA:"Previdência",COE:"COE",CRIPTO:"Criptoativo",OUTRO:"Outro"
 };
-function decode(ticker:string): {category:AssetCategory;symbol:string;name:string} {
-  if (!ticker.startsWith(PREFIX)) return {category: "FII",symbol:ticker,name:ticker};
-  const [,cat,symbol,name] = ticker.split("|");
+function decode(ticker:string): {category:AssetCategory;symbol:string;name:string;institution:string} {
+  if (!ticker.startsWith(PREFIX)) return {category: "FII",symbol:ticker,name:ticker,institution:""};
+  const [,cat,symbol,name,institution] = ticker.split("|");
   const category = (cat in LABELS ? cat : "OUTRO") as AssetCategory;
-  return {category,symbol:symbol ?? "",name:decodeURIComponent(name ?? symbol ?? "Ativo")};
+  return {category,symbol:symbol ?? "",name:decodeURIComponent(name ?? symbol ?? "Ativo"),institution:institution?decodeURIComponent(institution):""};
 }
-export function encodeAsset(category:AssetCategory,symbol:string,name:string) {
-  return PREFIX + category + "|" + symbol.trim().toUpperCase() + "|" + encodeURIComponent(name.trim());
+export function encodeAsset(category:AssetCategory,symbol:string,name:string,institution="") {
+  const base=PREFIX + category + "|" + symbol.trim().toUpperCase() + "|" + encodeURIComponent(name.trim());
+  return institution.trim()?base+"|"+encodeURIComponent(institution.trim()):base;
 }
 function readLocal(): Position[] {
   if (typeof window === "undefined") return [];
@@ -65,10 +67,10 @@ export function usePortfolio() {
     if(authLoading)return; let cancelled=false;
     async function load(){
       if(!user){setPositions(readLocal());setReady(true);return;}
-      const {data,error}=await supabase.from("positions").select("ticker, shares, avg_price, created_at").order("ticker");
+      const {data,error}=await supabase.from("positions").select("ticker, shares, avg_price, created_at, institution").order("ticker");
       if(cancelled)return;
       if(error){console.error("[positions] load error",error);setPositions(readLocal());setReady(true);return;}
-      const cloud:Position[]=(data??[]).map((r:any)=>({ticker:r.ticker,shares:Number(r.shares),avgPrice:Number(r.avg_price),purchasedAt:r.created_at??undefined}));
+      const cloud:Position[]=(data??[]).map((r:any)=>({ticker:r.ticker,shares:Number(r.shares),avgPrice:Number(r.avg_price),purchasedAt:r.created_at??undefined,institution:r.institution??""}));
       if(cloud.length===0){const local=readLocal();if(local.length){const rows=local.map(p=>({user_id:user.id,ticker:p.ticker,shares:p.shares,avg_price:p.avgPrice}));await supabase.from("positions").upsert(rows,{onConflict:"user_id,ticker"});setPositions(local);setReady(true);return;}}
       setPositions(cloud);setReady(true);
     }
@@ -109,13 +111,13 @@ export function usePortfolio() {
     return () => { cancelled = true; };
   }, [user, authLoading]);
 
-  const addOrUpdate=useCallback(async(ticker:string,shares:number,avgPrice:number)=>{
+  const addOrUpdate=useCallback(async(ticker:string,shares:number,avgPrice:number,institution="")=>{
     const existing=positions.find(p=>p.ticker===ticker);
     const total=(existing?.shares??0)+shares;
     const avg=existing ? (existing.shares*existing.avgPrice+shares*avgPrice)/total : avgPrice;
-    const next=existing?positions.map(p=>p.ticker===ticker?{...p,shares:total,avgPrice:avg}:{...p}):[...positions,{ticker,shares,avgPrice:avg,purchasedAt:new Date().toISOString()}];
+    const next=existing?positions.map(p=>p.ticker===ticker?{...p,shares:total,avgPrice:avg,institution}:{...p}):[...positions,{ticker,shares,avgPrice:avg,institution,purchasedAt:new Date().toISOString()}];
     setPositions(next);
-    if(user){const {error}=await supabase.from("positions").upsert({user_id:user.id,ticker,shares:total,avg_price:avg},{onConflict:"user_id,ticker"});if(error)console.error("[positions] upsert",error);}
+    if(user){const {error}=await supabase.from("positions").upsert({user_id:user.id,ticker,shares:total,avg_price:avg,institution},{onConflict:"user_id,ticker"});if(error)console.error("[positions] upsert",error);}
     else writeLocal(next);
   },[positions,user]);
 
