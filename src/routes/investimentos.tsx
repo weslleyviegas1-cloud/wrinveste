@@ -46,10 +46,30 @@ const groups: InvestmentGroup[] = [
 
 const filters = ["Todas", "Bolsa", "Renda fixa", "Crédito privado", "Fundos", "Internacional", "Previdência", "Estruturados", "Alternativos", "Ofertas"];
 
+function money(value: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number.isFinite(value) ? value : 0);
+}
+
 function Investimentos() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("Todas");
   const [selected, setSelected] = useState<InvestmentGroup | null>(null);
+  const [quoteTicker, setQuoteTicker] = useState("HGLG11");
+  const [principal, setPrincipal] = useState("10000");
+  const [annualRate, setAnnualRate] = useState("10");
+  const [monthlyDistribution, setMonthlyDistribution] = useState("0");
+  const [units, setUnits] = useState("100");
+  const normalizedTicker = quoteTicker.trim().toUpperCase();
+  const validTicker = /^[A-Z0-9]{4,8}$/.test(normalizedTicker);
+  const { quotes, loading: quoteLoading, error: quoteError, updatedAt, refresh } = useQuotes(validTicker ? [normalizedTicker] : []);
+  const quote = quotes[normalizedTicker];
+  const amount = Math.max(0, Number(principal.replace(",", ".")) || 0);
+  const rate = Math.max(0, Number(annualRate.replace(",", ".")) || 0);
+  const dividend = Math.max(0, Number(monthlyDistribution.replace(",", ".")) || 0);
+  const quantity = Math.max(0, Number(units.replace(",", ".")) || 0);
+  const monthlyIncome = amount * rate / 100 / 12;
+  const annualIncome = amount * rate / 100;
+  const monthlyCashDistribution = dividend * quantity;
   const list = useMemo(() => groups.filter(g =>
     (filter === "Todas" || g.category === filter) &&
     (!q || [g.name, g.category, g.desc, ...g.products].join(" ").toLowerCase().includes(q.toLowerCase()))
@@ -58,14 +78,33 @@ function Investimentos() {
   return (
     <main className="wr-invest-page">
       <header className="wr-invest-heading">
-        <div><p className="wr-eyebrow">UNIVERSO DE ATIVOS</p><h1>Investimentos</h1><p className="wr-muted">Explore as modalidades de investimento e organize seu patrimônio em um só lugar.</p></div>
+        <div><p className="wr-eyebrow">UNIVERSO DE ATIVOS</p><h1>Investimentos</h1><p className="wr-muted">Explore modalidades, consulte cotações disponíveis e simule rendimentos.</p></div>
         <Link to="/carteira" className="wr-primary-link">Minha carteira <ArrowUpRight size={16}/></Link>
       </header>
 
       <section className="wr-invest-sync">
         <div className="wr-invest-sync-icon"><ChartNoAxesCombined size={20}/></div>
-        <div><b>Visão consolidada dos seus investimentos</b><p>Este catálogo prepara a WR para reunir, no futuro, os investimentos mantidos em instituições conectadas por cada usuário.</p></div>
-        <span className="wr-risk-pill">Integração bancária futura</span>
+        <div><b>Visão consolidada dos seus investimentos</b><p>Consulte ativos negociados em bolsa e estime rendimentos conforme as condições de cada produto.</p></div>
+        <span className="wr-risk-pill">XP: integração futura</span>
+      </section>
+
+      <section className="wr-live-quote-panel">
+        <div className="wr-live-quote-title"><div><p className="wr-eyebrow">COTAÇÃO DE ATIVOS LISTADOS</p><h2>Consultar preço de mercado</h2></div><span className="wr-risk-pill">Última cotação disponível</span></div>
+        <div className="wr-live-quote-controls"><input value={quoteTicker} onChange={e=>setQuoteTicker(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8))} placeholder="Ex.: PETR4, HGLG11, IVVB11" aria-label="Ticker para consultar cotação"/><button type="button" onClick={()=>void refresh()} disabled={!validTicker || quoteLoading}>{quoteLoading?"Consultando…":"Atualizar cotação"} <ArrowUpRight size={15}/></button></div>
+        {quote ? <div className="wr-live-quote-result"><div><span>Preço consultado</span><strong>{money(quote.price)}</strong></div><div><span>Variação informada</span><strong className={quote.change>=0?"wr-positive":"wr-negative"}>{quote.change>=0?"+":""}{quote.change.toFixed(2).replace(".",",")}%</strong></div><div><span>Horário da negociação informado</span><strong>{quote.marketTime?new Date(quote.marketTime).toLocaleString("pt-BR"):"Não informado pelo provedor"}</strong></div><div><span>Consulta realizada</span><strong>{updatedAt?new Date(updatedAt).toLocaleString("pt-BR"):"—"}</strong></div></div> : <p className="wr-muted">{quoteLoading?"Buscando no provedor de cotações…":quoteError? "Não foi possível consultar este ticker agora. Tente novamente mais tarde.": "Digite um ticker negociado em bolsa para consultar a última cotação disponível. Ativos de renda fixa bancária e produtos sem negociação em bolsa não possuem preço intradiário público universal."}</p>}
+        <p className="wr-data-disclaimer">Fonte atual: Yahoo Finance, quando o ativo é coberto. A consulta não garante tempo real; o horário da última negociação é exibido somente quando informado pela fonte. Cotações podem ter atraso, indisponibilidade ou divergência. Não use como preço de execução de ordens.</p>
+      </section>
+
+      <section className="wr-income-calculator">
+        <div><p className="wr-eyebrow">PLANEJAMENTO FINANCEIRO</p><h2>Quanto posso receber?</h2><p className="wr-muted">Simule renda bruta com base no valor investido e na taxa estimada informada por você.</p></div>
+        <div className="wr-income-fields">
+          <label>Valor aplicado (R$)<input inputMode="decimal" value={principal} onChange={e=>setPrincipal(e.target.value)} /></label>
+          <label>Taxa anual estimada (%)<input inputMode="decimal" value={annualRate} onChange={e=>setAnnualRate(e.target.value)} /></label>
+          <label>Distribuição mensal por cota (R$)<input inputMode="decimal" value={monthlyDistribution} onChange={e=>setMonthlyDistribution(e.target.value)} /></label>
+          <label>Quantidade de cotas/unidades<input inputMode="decimal" value={units} onChange={e=>setUnits(e.target.value)} /></label>
+        </div>
+        <div className="wr-income-results"><div><span>Renda mensal estimada pela taxa</span><strong>{money(monthlyIncome)}</strong></div><div><span>Renda anual estimada pela taxa</span><strong>{money(annualIncome)}</strong></div><div><span>Distribuição mensal informada por unidade</span><strong>{money(monthlyCashDistribution)}</strong></div><div><span>Patrimônio + rendimento em 12 meses*</span><strong>{money(amount+annualIncome)}</strong></div></div>
+        <p className="wr-data-disclaimer">*Simulação simples, bruta e não composta: taxa anual dividida por 12. A distribuição por unidade é calculada separadamente (valor mensal informado × quantidade) para evitar somar dividendos e juros como se fossem garantidos. Não considera impostos, taxas, inflação, oscilações, reinvestimento, carência, amortização ou risco de crédito. Para renda variável, dividendos e proventos não são garantidos; para renda fixa, o resultado depende do indexador, prazo, preço de compra e tributação.</p>
       </section>
 
       <div className="wr-invest-search"><Search size={19}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar ações, CDB, Tesouro, fundos, previdência..." aria-label="Buscar investimentos"/></div>
@@ -90,11 +129,11 @@ function Investimentos() {
           <p>{selected.desc}</p><h3>Modalidades disponíveis no mercado</h3>
           <ul>{selected.products.map(p=><li key={p}>{p}</li>)}</ul>
           <div className="wr-invest-modal-note">{selected.detail}</div>
-          <p className="wr-muted">A disponibilidade depende da instituição financeira, do perfil do investidor e das condições de cada produto.</p>
+          <p className="wr-muted">Preço, taxa, rendimento, liquidez e tributação dependem do ativo, emissor, vencimento e instituição. Quando não houver cotação pública, os dados devem vir do extrato ou da instituição custodiante.</p>
         </section>
       </div>}
 
-      <aside className="wr-invest-note"><b>Como a WR vai funcionar com suas instituições</b><p>O objetivo futuro é conectar, com autorização individual, as instituições financeiras escolhidas por cada usuário e importar suas posições e movimentações para uma visão consolidada. Até essa integração ser implementada e autorizada, este catálogo é informativo: não conecta contas, não importa investimentos automaticamente e não executa ordens. A disponibilidade, liquidez, riscos, taxas e tributação dependem de cada produto e instituição.</p></aside>
+      <aside className="wr-invest-note"><b>Integração futura com XP e outras instituições</b><p>O objetivo é conectar cada conta individualmente, mediante autorização e integração oficial, para importar posições, preços, movimentações e proventos disponíveis. Até a integração estar implementada, este catálogo e o simulador não acessam contas bancárias, não confirmam saldo real e não executam ordens. Cada usuário deverá visualizar exclusivamente os próprios dados.</p></aside>
     </main>
   );
 }
