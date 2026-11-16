@@ -43,7 +43,8 @@ const LABELS: Record<AssetCategory,string> = {
 };
 function decode(ticker:string): {category:AssetCategory;symbol:string;name:string;institution:string} {
   if (!ticker.startsWith(PREFIX)) return {category: "FII",symbol:ticker,name:ticker,institution:""};
-  const [,cat,symbol,name,institution] = ticker.split("|");
+  const [categoryPart,symbol,name,institution] = ticker.split("|");
+  const cat=categoryPart?.slice(PREFIX.length) ?? "OUTRO";
   const category = (cat in LABELS ? cat : "OUTRO") as AssetCategory;
   return {category,symbol:symbol ?? "",name:decodeURIComponent(name ?? symbol ?? "Ativo"),institution:institution?decodeURIComponent(institution):""};
 }
