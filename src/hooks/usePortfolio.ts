@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuotes } from "@/hooks/useQuotes";
@@ -32,6 +32,9 @@ export interface PortfolioPosition extends Position {
   totalReturnPct:number;
 }
 const KEY = "fii.portfolio.v1";
+const HISTORY_KEY = "wr.portfolio.history.v1";
+const SNAPSHOT_INTERVAL_MS = 30 * 60_000;
+export interface PortfolioSnapshot { capturedAt: string; totalValue: number; investedValue: number; }
 const PREFIX = "WRASSET:";
 const LABELS: Record<AssetCategory,string> = {
   FII:"FII",ACAO:"Ação",ETF:"ETF",BDR:"BDR",TESOURO:"Tesouro Direto",CDB:"CDB/RDB",LCI_LCA:"LCI/LCA",
@@ -56,6 +59,8 @@ export function usePortfolio() {
   const {user,loading:authLoading}=useAuth();
   const [positions,setPositions]=useState<Position[]>([]);
   const [ready,setReady]=useState(false);
+  const [history,setHistory]=useState<PortfolioSnapshot[]>([]);
+  const lastSnapshotAttempt=useRef(0);
   useEffect(()=>{
     if(authLoading)return; let cancelled=false;
     async function load(){
@@ -69,6 +74,40 @@ export function usePortfolio() {
     }
     void load();return()=>{cancelled=true;};
   },[user,authLoading]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    let cancelled = false;
+    async function loadHistory() {
+      if (!user) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+          if (!cancelled) setHistory(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          if (!cancelled) setHistory([]);
+        }
+        return;
+      }
+      const { data, error } = await supabase
+        .from("portfolio_snapshots")
+        .select("captured_at,total_value,invested_value")
+        .order("captured_at", { ascending: true })
+        .limit(500);
+      if (cancelled) return;
+      if (error) {
+        console.error("[portfolio_snapshots] load", error);
+        setHistory([]);
+        return;
+      }
+      setHistory((data || []).map((row: any) => ({
+        capturedAt: row.captured_at,
+        totalValue: Number(row.total_value),
+        investedValue: Number(row.invested_value),
+      })));
+    }
+    void loadHistory();
+    return () => { cancelled = true; };
+  }, [user, authLoading]);
 
   const addOrUpdate=useCallback(async(ticker:string,shares:number,avgPrice:number)=>{
     const existing=positions.find(p=>p.ticker===ticker);
@@ -114,7 +153,40 @@ export function usePortfolio() {
   const totals=enriched.reduce((a,p)=>({invested:a.invested+p.invested,current:a.current+p.current}),{invested:0,current:0});
   const profit=totals.current-totals.invested;
   const withWeights=enriched.map(p=>({...p,weight:totals.current>0?p.current/totals.current*100:0}));
-  return {ready,positions:withWeights,totals:{...totals,profit,profitPct:totals.invested>0?profit/totals.invested*100:0,
+  useEffect(() => {
+    if (!ready || !positions.length || quotesLoading) return;
+    if (withWeights.some((position) => position.priceStatus === "unavailable")) return;
+    const now = Date.now();
+    if (now - lastSnapshotAttempt.current < SNAPSHOT_INTERVAL_MS) return;
+    lastSnapshotAttempt.current = now;
+    const point: PortfolioSnapshot = {
+      capturedAt: new Date(now).toISOString(),
+      totalValue: totals.current,
+      investedValue: totals.invested,
+    };
+    if (user) {
+      void supabase.from("portfolio_snapshots").insert({
+        user_id: user.id,
+        total_value: point.totalValue,
+        invested_value: point.investedValue,
+        captured_at: point.capturedAt,
+      }).then(({ error }) => {
+        if (error) {
+          console.error("[portfolio_snapshots] insert", error);
+          return;
+        }
+        setHistory((current) => [...current, point].slice(-500));
+      });
+    } else {
+      setHistory((current) => {
+        const next = [...current, point].slice(-500);
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* history remains in memory */ }
+        return next;
+      });
+    }
+  }, [ready, positions, quotesLoading, user, totals.current, totals.invested, withWeights]);
+
+  return {ready,positions:withWeights,history,totals:{...totals,profit,profitPct:totals.invested>0?profit/totals.invested*100:0,
     monthly:withWeights.reduce((s,p)=>s+(p.monthlyDividend??0),0),yearly:withWeights.reduce((s,p)=>s+(p.yearlyDividend??0),0),
     received:0,yieldOnCost:totals.invested>0?withWeights.reduce((s,p)=>s+(p.yearlyDividend??0),0)/totals.invested*100:0},addOrUpdate,remove,clearAll,setAll:(next:Position[])=>{setPositions(next);if(user)return;writeLocal(next);},
     cloudSynced:!!user,quotes,quotesLoading,quotesError,quotesUpdatedAt,refreshQuotes};
