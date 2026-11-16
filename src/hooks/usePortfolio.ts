@@ -98,7 +98,8 @@ export function usePortfolio() {
   const enriched:PortfolioPosition[]=positions.map(p=>{
     const d=decode(p.ticker); const quote=quotes[d.symbol];
     const marketCategory=["FII","ACAO","ETF","BDR","CRIPTO"].includes(d.category);
-    const live=Boolean(marketCategory&&quote);
+    const quoteFresh=Boolean(quote&&Number.isFinite(Date.parse(quote.updatedAt))&&Date.now()-Date.parse(quote.updatedAt)<5*60_000);
+    const live=Boolean(marketCategory&&quoteFresh);
     const currentPrice=live?quote!.price:p.avgPrice;
     const invested=p.shares*p.avgPrice;
     const current=p.shares*currentPrice;
