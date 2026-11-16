@@ -88,7 +88,7 @@ function Dashboard() {
             </span>
             <Radio className="h-3 w-3" />
             <span className="tabular">
-              {quotesError ? "Sem conexão" : updatedLabel ? `Cotações ao vivo · ${updatedLabel}` : "Buscando cotações..."}
+              {quotesError ? "Sem conexão" : updatedLabel ? `Última consulta · ${updatedLabel}` : "Consultando cotações..."}
             </span>
           </div>
           <div className="flex items-center gap-1">
