@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      portfolio_snapshots: {
+        Row: { captured_at: string; id: string; invested_value: number; total_value: number; user_id: string }
+        Insert: { captured_at?: string; id?: string; invested_value: number; total_value: number; user_id: string }
+        Update: { captured_at?: string; id?: string; invested_value?: number; total_value?: number; user_id?: string }
+        Relationships: []
+      }
       positions: {
         Row: {
           avg_price: number
