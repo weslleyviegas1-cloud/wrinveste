@@ -38,6 +38,7 @@ async function fetchYahooHost(
     | {
         meta?: {
           regularMarketPrice?: number;
+          regularMarketTime?: number;
           chartPreviousClose?: number;
           currency?: string;
           shortName?: string;
@@ -64,6 +65,9 @@ async function fetchYahooHost(
   const lastDividend = Number(dividends[0]?.amount ?? averageLast12);
   const monthlyDividend = lastDividend > 0 ? lastDividend : averageLast12;
   const yearlyDividend = monthlyDividend * 12;
+  const marketTime = typeof meta.regularMarketTime === "number"
+    ? new Date(meta.regularMarketTime * 1000).toISOString()
+    : undefined;
 
   return {
     ticker,
@@ -77,6 +81,7 @@ async function fetchYahooHost(
     monthlyDividend,
     yearlyDividend,
     dividendYield: price > 0 ? (yearlyDividend / price) * 100 : 0,
+    ...(marketTime ? { marketTime } : {}),
     updatedAt: new Date().toISOString(),
     source: `yahoo:${host}`,
   };
@@ -91,11 +96,10 @@ export async function fetchQuotes(tickers: string[]): Promise<QuotesResponse> {
   const quotes: Record<string, Quote> = {};
   const toFetch: string[] = [];
 
-  for (const ticker of tickers) {
-    const normalizedTicker = ticker.toUpperCase();
-    const cached = cache.get(normalizedTicker);
-    if (cached && cached.expiresAt > now) quotes[normalizedTicker] = cached.quote;
-    else toFetch.push(normalizedTicker);
+  for (const ticker of [...new Set(tickers.map((item) => item.toUpperCase()))]) {
+    const cached = cache.get(ticker);
+    if (cached && cached.expiresAt > now) quotes[ticker] = cached.quote;
+    else toFetch.push(ticker);
   }
 
   const results: Array<Quote | null> = new Array(toFetch.length);

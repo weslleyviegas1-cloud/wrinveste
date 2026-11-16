@@ -2,16 +2,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { getQuotes } from "@/lib/quotes.functions";
 import type { Quote } from "@/lib/quotes.types";
 
-const REFRESH_MS = 60_000; // 1 min
-const STORAGE_KEY = "fii.quotes.cache.v1";
+const REFRESH_MS = 60_000;
+const THROTTLE_MS = 5_000;
+const STORAGE_KEY = "fii.quotes.cache.v2";
 
-// Module-level cache — persists across route navigation (component remounts)
 const quoteCache: Record<string, Quote> = {};
+const inflightByKey = new Map<string, Promise<void>>();
+const lastFetchByKey = new Map<string, number>();
 let lastFetchedAt: string | null = null;
-let inflight: Promise<void> | null = null;
-let lastFetchTs = 0;
 
-// Hydrate from localStorage once (survives full reloads)
 if (typeof window !== "undefined" && Object.keys(quoteCache).length === 0) {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -22,7 +21,9 @@ if (typeof window !== "undefined" && Object.keys(quoteCache).length === 0) {
         lastFetchedAt = parsed.fetchedAt ?? null;
       }
     }
-  } catch {}
+  } catch {
+    // Cache local corrompido não deve impedir a consulta ao provedor.
+  }
 }
 
 function persist() {
@@ -32,66 +33,75 @@ function persist() {
       STORAGE_KEY,
       JSON.stringify({ quotes: quoteCache, fetchedAt: lastFetchedAt })
     );
-  } catch {}
+  } catch {
+    // A aplicação continua funcionando mesmo sem espaço no armazenamento local.
+  }
 }
 
 export function useQuotes(tickers: string[]) {
-  const key = [...new Set(tickers.map((t) => t.toUpperCase()))].sort().join(",");
+  const key = [...new Set(tickers.map((ticker) => ticker.toUpperCase()))].sort().join(",");
+  const activeKeyRef = useRef(key);
+  activeKeyRef.current = key;
 
-  // Initial state seeded from module cache → no flash of stale mock data
   const [quotes, setQuotes] = useState<Record<string, Quote>>(() => ({ ...quoteCache }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(lastFetchedAt);
 
-  const tickerListRef = useRef<string[]>([]);
-  tickerListRef.current = key ? key.split(",") : [];
-
   const fetchNow = useCallback(async (force = false) => {
-    const list = tickerListRef.current;
+    const requestKey = activeKeyRef.current;
+    const list = requestKey ? requestKey.split(",") : [];
     if (list.length === 0) return;
 
-    // Throttle: skip if a recent fetch already happened (unless forced)
     const now = Date.now();
-    if (!force && now - lastFetchTs < 5_000) return;
+    if (!force && now - (lastFetchByKey.get(requestKey) ?? 0) < THROTTLE_MS) return;
 
-    if (inflight) return inflight;
+    const existing = inflightByKey.get(requestKey);
+    if (existing) return existing;
 
     setLoading(true);
     setError(null);
-    lastFetchTs = now;
+    lastFetchByKey.set(requestKey, now);
 
-    inflight = (async () => {
+    const request = (async () => {
       try {
-        const res = await getQuotes({ data: { tickers: list } });
-        Object.assign(quoteCache, res.quotes);
-        lastFetchedAt = res.fetchedAt;
+        const response = await getQuotes({ data: { tickers: list } });
+        Object.assign(quoteCache, response.quotes);
+        lastFetchedAt = response.fetchedAt;
         persist();
-        setQuotes({ ...quoteCache });
-        setUpdatedAt(res.fetchedAt);
-      } catch (e: any) {
-        console.error("[useQuotes]", e);
-        setError(e?.message ?? "Erro ao buscar cotações");
+
+        if (activeKeyRef.current === requestKey) {
+          setQuotes({ ...quoteCache });
+          setUpdatedAt(response.fetchedAt);
+        }
+      } catch (cause) {
+        console.error("[useQuotes]", cause);
+        if (activeKeyRef.current === requestKey) {
+          setError(cause instanceof Error ? cause.message : "Erro ao buscar cotações");
+        }
       } finally {
-        setLoading(false);
-        inflight = null;
+        inflightByKey.delete(requestKey);
+        if (activeKeyRef.current === requestKey) setLoading(false);
       }
     })();
 
-    return inflight;
+    inflightByKey.set(requestKey, request);
+    return request;
   }, []);
 
   useEffect(() => {
     if (!key) return;
-    fetchNow();
-    const id = setInterval(() => fetchNow(true), REFRESH_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") fetchNow();
+    setQuotes({ ...quoteCache });
+    void fetchNow();
+    const intervalId = window.setInterval(() => void fetchNow(true), REFRESH_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void fetchNow();
     };
-    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [key, fetchNow]);
 
