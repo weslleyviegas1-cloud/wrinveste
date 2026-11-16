@@ -54,6 +54,7 @@ function Carteira() {
   const calculatedTotal = quantity > 0 && unitPrice > 0 ? quantity * unitPrice : 0;
   const unusedAmount = entryMode === "amount" && desiredAmount > 0 ? Math.max(0, desiredAmount - calculatedTotal) : 0;
   const filtered = useMemo(() => positions.filter(p => !query || [p.name, p.symbol, p.institution || "", ASSET_LABELS[p.category]].join(" ").toLowerCase().includes(query.toLowerCase())), [positions, query]);
+  const filteredManual = useMemo(() => manualItems.filter(item => !query || [item.productName, item.institution, item.category, item.ticker || ""].join(" ").toLowerCase().includes(query.toLowerCase())), [manualItems, query]);
   const consolidatedInvested = totals.invested + manualTotals.invested;
   const consolidatedCurrent = totals.current + manualTotals.current;
   const consolidatedProfit = consolidatedCurrent - consolidatedInvested;
@@ -118,16 +119,16 @@ function Carteira() {
     </div>
     {quotesError && <p className="wr-data-disclaimer">Não foi possível consultar algumas cotações agora. Valores sem cotação não são apresentados como preços atuais.</p>}
     {quotesUpdatedAt && <p className="wr-data-disclaimer">Última consulta geral: {new Date(quotesUpdatedAt).toLocaleString("pt-BR")}. A cotação pode ter atraso e não representa preço de execução.</p>}
-    {filtered.length === 0 ? (manualItems.length === 0 ? <div className="wr-invest-note"><Wallet size={24} /><b>{positions.length ? "Nenhum resultado encontrado" : "Sua carteira ainda está vazia"}</b><p>Cadastre FIIs, ações, ETFs, BDRs e aplicações de renda fixa. O sistema calcula quantidades e consolida os valores.</p></div> : null) :
+    {filtered.length === 0 ? (filteredManual.length === 0 ? <div className="wr-invest-note"><Wallet size={24} /><b>{positions.length ? "Nenhum resultado encontrado" : "Sua carteira ainda está vazia"}</b><p>Cadastre FIIs, ações, ETFs, BDRs e aplicações de renda fixa. O sistema calcula quantidades e consolida os valores.</p></div> : null) :
       <div className="wr-portfolio-list">{filtered.map(p => <article className="wr-portfolio-row" key={p.ticker}>
         <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{ASSET_LABELS[p.category]}</span><h3>{p.name}</h3><small>{p.symbol}{p.institution ? " · " + p.institution : ""}</small></div><button type="button" onClick={() => void remove(p.ticker)} aria-label="Remover investimento"><Trash2 size={16} /></button></div>
         <div className="wr-portfolio-metrics"><div><span>Quantidade</span><b>{num(p.shares, 6)}</b></div><div><span>Preço médio</span><b>{brl(p.avgPrice)}</b></div><div><span>Preço atual / referência</span><b>{brl(p.currentPrice)}</b></div><div><span>Valor da posição</span><b>{brl(p.current)}</b></div><div><span>Resultado</span><b className={p.profit >= 0 ? "wr-positive" : "wr-negative"}>{brl(p.profit)} ({pct(p.profitPct)})</b></div></div>
         <div className="wr-portfolio-status"><span>{p.live ? "Cotação consultada recentemente pelo provedor" : p.priceStatus === "cost_basis" ? "Sem marcação de mercado: custo de aquisição" : "Cotação indisponível: exibindo custo de aquisição"}</span>{p.change !== null && <b className={p.change >= 0 ? "wr-positive" : "wr-negative"}>{p.change >= 0 ? "+" : ""}{p.change.toFixed(2).replace(".", ",")}%</b>}</div>
         {p.monthlyDividend !== null && <div className="wr-portfolio-income"><span>Proventos mensais indicativos da posição</span><b>{brl(p.monthlyDividend)}</b></div>}
       </article>)}</div>}
-    {manualItems.length > 0 && <section className="wr-portfolio-manual-section">
+    {filteredManual.length > 0 && <section className="wr-portfolio-manual-section">
       <div className="wr-portfolio-manual-heading"><h2>Renda fixa e outras aplicações</h2><span>{manualItems.length} registros</span></div>
-      {manualItems.map(item => <article className="wr-portfolio-row" key={item.id}>
+      {filteredManual.map(item => <article className="wr-portfolio-row" key={item.id}>
         <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{item.category}</span><h3>{item.productName}</h3><small>{item.institution}{item.ticker ? " · " + item.ticker : ""}</small></div><div className="wr-portfolio-row-actions"><Link to="/patrimonio" className="wr-manual-edit-link">Editar</Link><button type="button" onClick={() => { if (confirm("Excluir esta aplicação do seu patrimônio?")) void removeManual(item.id); }} aria-label="Remover aplicação"><Trash2 size={16} /></button></div></div>
         <div className="wr-portfolio-metrics"><div><span>Valor aplicado</span><b>{brl(item.investedAmount)}</b></div><div><span>Valor atual</span><b>{brl(item.currentValue)}</b></div><div><span>Resultado</span><b className={item.currentValue >= item.investedAmount ? "wr-positive" : "wr-negative"}>{brl(item.currentValue - item.investedAmount)}</b></div><div><span>Liquidez</span><b>{item.liquidity}</b></div><div><span>Taxa / indexador</span><b>{item.annualRate != null ? item.annualRate + "% " + (item.rateIndex || "a.a.") : item.rateIndex || "—"}</b></div></div>
         <div className="wr-portfolio-status"><span>{item.valuationMode === "manual" ? "Valor atualizado conforme extrato informado" : "Valor estimado"}</span>{item.maturityDate && <b>Vencimento: {new Date(item.maturityDate + "T12:00:00").toLocaleDateString("pt-BR")}</b>}</div>
