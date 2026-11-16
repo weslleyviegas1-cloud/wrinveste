@@ -80,7 +80,7 @@ function Carteira() {
     if (!isMarket) {
       const investedAmount = desiredAmount;
       const currentValue = manualCurrentValue.trim() ? moneyNumber(manualCurrentValue) : investedAmount;
-      if (investedAmount <= 0 || currentValue < 0) return;
+      if (!Number.isFinite(investedAmount) || !Number.isFinite(currentValue) || investedAmount <= 0 || currentValue < 0) return;
       const saved = await addManual({
         institution: institution.trim(),
         category: ASSET_LABELS[category],
@@ -99,7 +99,7 @@ function Carteira() {
       if (saved) setOpen(false);
       return;
     }
-    if (!normalizedSymbol || quantity <= 0 || unitPrice <= 0 || (isMarket && !Number.isInteger(quantity))) return;
+    if (!normalizedSymbol || !Number.isFinite(quantity) || !Number.isFinite(unitPrice) || quantity <= 0 || unitPrice <= 0 || (isMarket && !Number.isInteger(quantity))) return;
     const key = encodeAsset(category, normalizedSymbol, name, institution);
     await addOrUpdate(key, quantity, unitPrice, institution.trim());
     setOpen(false);
@@ -118,7 +118,7 @@ function Carteira() {
     </div>
     {quotesError && <p className="wr-data-disclaimer">Não foi possível consultar algumas cotações agora. Valores sem cotação não são apresentados como preços atuais.</p>}
     {quotesUpdatedAt && <p className="wr-data-disclaimer">Última consulta geral: {new Date(quotesUpdatedAt).toLocaleString("pt-BR")}. A cotação pode ter atraso e não representa preço de execução.</p>}
-    {filtered.length === 0 ? <div className="wr-invest-note"><Wallet size={24} /><b>{positions.length ? "Nenhum resultado encontrado" : "Sua carteira ainda está vazia"}</b><p>Cadastre FIIs, ações, ETFs, BDRs e outros investimentos. O sistema calcula quantidade, preço médio, valor aplicado e resultado.</p></div> :
+    {filtered.length === 0 ? (manualItems.length === 0 ? <div className="wr-invest-note"><Wallet size={24} /><b>{positions.length ? "Nenhum resultado encontrado" : "Sua carteira ainda está vazia"}</b><p>Cadastre FIIs, ações, ETFs, BDRs e aplicações de renda fixa. O sistema calcula quantidades e consolida os valores.</p></div> : null) :
       <div className="wr-portfolio-list">{filtered.map(p => <article className="wr-portfolio-row" key={p.ticker}>
         <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{ASSET_LABELS[p.category]}</span><h3>{p.name}</h3><small>{p.symbol}{p.institution ? " · " + p.institution : ""}</small></div><button type="button" onClick={() => void remove(p.ticker)} aria-label="Remover investimento"><Trash2 size={16} /></button></div>
         <div className="wr-portfolio-metrics"><div><span>Quantidade</span><b>{num(p.shares, 6)}</b></div><div><span>Preço médio</span><b>{brl(p.avgPrice)}</b></div><div><span>Preço atual / referência</span><b>{brl(p.currentPrice)}</b></div><div><span>Valor da posição</span><b>{brl(p.current)}</b></div><div><span>Resultado</span><b className={p.profit >= 0 ? "wr-positive" : "wr-negative"}>{brl(p.profit)} ({pct(p.profitPct)})</b></div></div>
@@ -128,7 +128,7 @@ function Carteira() {
     {manualItems.length > 0 && <section className="wr-portfolio-manual-section">
       <div className="wr-portfolio-manual-heading"><h2>Renda fixa e outras aplicações</h2><span>{manualItems.length} registros</span></div>
       {manualItems.map(item => <article className="wr-portfolio-row" key={item.id}>
-        <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{item.category}</span><h3>{item.productName}</h3><small>{item.institution}{item.ticker ? " · " + item.ticker : ""}</small></div><button type="button" onClick={() => { if (confirm("Excluir esta aplicação do seu patrimônio?")) void removeManual(item.id); }} aria-label="Remover aplicação"><Trash2 size={16} /></button></div>
+        <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{item.category}</span><h3>{item.productName}</h3><small>{item.institution}{item.ticker ? " · " + item.ticker : ""}</small></div><div className="wr-portfolio-row-actions"><Link to="/patrimonio" className="wr-manual-edit-link">Editar</Link><button type="button" onClick={() => { if (confirm("Excluir esta aplicação do seu patrimônio?")) void removeManual(item.id); }} aria-label="Remover aplicação"><Trash2 size={16} /></button></div></div>
         <div className="wr-portfolio-metrics"><div><span>Valor aplicado</span><b>{brl(item.investedAmount)}</b></div><div><span>Valor atual</span><b>{brl(item.currentValue)}</b></div><div><span>Resultado</span><b className={item.currentValue >= item.investedAmount ? "wr-positive" : "wr-negative"}>{brl(item.currentValue - item.investedAmount)}</b></div><div><span>Liquidez</span><b>{item.liquidity}</b></div><div><span>Taxa / indexador</span><b>{item.annualRate != null ? item.annualRate + "% " + (item.rateIndex || "a.a.") : item.rateIndex || "—"}</b></div></div>
         <div className="wr-portfolio-status"><span>{item.valuationMode === "manual" ? "Valor atualizado conforme extrato informado" : "Valor estimado"}</span>{item.maturityDate && <b>Vencimento: {new Date(item.maturityDate + "T12:00:00").toLocaleDateString("pt-BR")}</b>}</div>
       </article>)}
@@ -160,7 +160,7 @@ function Carteira() {
             {entryMode === "amount" && <div><span>Saldo não utilizado</span><b>{brl(unusedAmount)}</b></div>}
           </div>
           <p className="wr-data-disclaimer">O sistema calcula o preço médio ponderado em novas compras do mesmo ativo na mesma instituição. Não envia ordens à corretora.</p>
-          <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !normalizedSymbol || !name.trim() || quantity <= 0 || unitPrice <= 0 || !Number.isInteger(quantity) || (entryMode === "amount" && desiredAmount < unitPrice)}>Salvar investimento na carteira</button>
+          <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !normalizedSymbol || !name.trim() || !Number.isFinite(quantity) || !Number.isFinite(unitPrice) || quantity <= 0 || unitPrice <= 0 || !Number.isInteger(quantity) || (entryMode === "amount" && desiredAmount < unitPrice)}>Salvar investimento na carteira</button>
         </> : <>
           <label>Valor aplicado (R$)<input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex.: 1.000,00" /></label>
           <label>Valor atual (R$)<input inputMode="decimal" value={manualCurrentValue} onChange={e => setManualCurrentValue(e.target.value)} placeholder="Deixe vazio para repetir o valor aplicado" /></label>
@@ -170,7 +170,7 @@ function Carteira() {
           <label>Observações<textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength={1000} rows={3} placeholder="Informações complementares do investimento" /></label>
           <div className="wr-calculation-preview"><div><span>Resultado registrado</span><b>{brl((manualCurrentValue.trim() ? moneyNumber(manualCurrentValue) : desiredAmount) - desiredAmount)}</b></div><div><span>Valor consolidado</span><b>{brl(manualCurrentValue.trim() ? moneyNumber(manualCurrentValue) : desiredAmount)}</b></div></div>
           <p className="wr-data-disclaimer">Para CDB, LCI/LCA, Tesouro, previdência e produtos sem cotação pública, informe o valor atual conforme o extrato da instituição. O WR não inventa rentabilidade nem consulta o saldo bancário.</p>
-          <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !name.trim() || desiredAmount <= 0 || (manualCurrentValue.trim() && moneyNumber(manualCurrentValue) < 0)}>Salvar aplicação na carteira</button>
+          <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !name.trim() || !Number.isFinite(desiredAmount) || desiredAmount <= 0 || (manualCurrentValue.trim() && (!Number.isFinite(moneyNumber(manualCurrentValue)) || moneyNumber(manualCurrentValue) < 0))}>Salvar aplicação na carteira</button>
         </>}
       </form>
     </div>}
