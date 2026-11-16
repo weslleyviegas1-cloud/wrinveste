@@ -41,7 +41,28 @@ export function useTrackedInvestments() {
     if(!user){setItems(readLocal());setLoading(false);return;}
     const {data,error}=await supabase.from("tracked_investments").select("*").order("updated_at",{ascending:false});
     if(error){console.error("[tracked_investments]",error);setItems(readLocal());setError("Não foi possível sincronizar. Exibindo os registros locais deste dispositivo.");}
-    else setItems((data||[]).map(fromRow));
+    else if ((data || []).length > 0) {
+      setItems((data || []).map(fromRow));
+    } else {
+      const local = readLocal();
+      if (local.length) {
+        const { data: migrated, error: migrationError } = await supabase
+          .from("tracked_investments")
+          .insert(local.map((item) => toRow(item, user.id)))
+          .select("*");
+        if (migrationError) {
+          console.error("[tracked_investments] local migration", migrationError);
+          setItems(local);
+          setError("Os registros locais foram preservados, mas ainda não puderam ser enviados à nuvem.");
+        } else {
+          const cloudItems = (migrated || []).map(fromRow);
+          setItems(cloudItems);
+          try { localStorage.removeItem(STORAGE_KEY); } catch { /* keep the cloud copy */ }
+        }
+      } else {
+        setItems([]);
+      }
+    }
     setLoading(false);
   },[user,authLoading]);
   useEffect(()=>{void reload();},[reload]);
