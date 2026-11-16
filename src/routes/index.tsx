@@ -86,7 +86,7 @@ function Dashboard() {
             </span>
             <Radio className="h-3 w-3" />
             <span className="tabular">
-              {quotesError ? "Sem conexão" : updatedLabel ? `Cotações ao vivo · ${updatedLabel}` : "Buscando cotações..."}
+              {quotesError ? "Sem conexão" : updatedLabel ? `Última consulta · ${updatedLabel}` : "Buscando cotações..."}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -204,7 +204,7 @@ function Dashboard() {
                 <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
+                      <stop offset="0%" stopColor="oklch(0.88 0.16 92)" stopOpacity={0.6} />
                       <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
