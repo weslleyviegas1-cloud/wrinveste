@@ -12,7 +12,7 @@ async function fetchYahooHost(
   ticker: string,
   host: "query1" | "query2",
 ): Promise<Quote | null> {
-  const symbol = `${ticker}.SA`;
+  const symbol = ticker.includes("-") ? ticker : `${ticker}.SA`;
   const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1mo&range=1y&events=div`;
 
   let response: Response;
