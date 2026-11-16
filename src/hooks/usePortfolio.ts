@@ -344,6 +344,7 @@ export function usePortfolio() {
 
   return {
     ready,
+    history,
     positions: withWeights,
     totals: { ...totals, profit, profitPct, yearly, yieldOnCost },
     addOrUpdate,
