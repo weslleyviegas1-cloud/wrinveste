@@ -49,7 +49,7 @@ function Patrimonio(){
   <p className="mt-2 font-display text-3xl font-bold tabular">{brl(totalCurrent)}</p>
   <div className="mt-4 grid grid-cols-2 gap-3">
    <div><p className="text-xs text-muted-foreground">Total aplicado</p><p className="font-semibold tabular">{brl(totalInvested)}</p></div>
-   <div><p className="text-xs text-muted-foreground">Resultado registrado</p><p className={`font-semibold tabular ${result>=0?"text-success":"text-danger"}`}>{result>=0?"+":""}{brl(result)} ({pct(totals.invested?result/totals.invested*100:0)})</p></div>
+   <div><p className="text-xs text-muted-foreground">Resultado registrado</p><p className={`font-semibold tabular ${result>=0?"text-success":"text-danger"}`}>{result>=0?"+":""}{brl(result)} ({pct(totalInvested?result/totalInvested*100:0)})</p></div>
   </div>
   <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">Soma dos valores atuais informados ou calculados neste aplicativo. Não representa saldo bancário confirmado nem consulta automática às instituições.</p>
  </section>
