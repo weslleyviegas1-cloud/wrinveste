@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SimuladorRouteImport } from './routes/simulador'
 import { Route as RecomendacoesRouteImport } from './routes/recomendacoes'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InvestimentosRouteImport } from './routes/investimentos'
 import { Route as FundosRouteImport } from './routes/fundos'
 import { Route as CarteiraRouteImport } from './routes/carteira'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +30,11 @@ const RecomendacoesRoute = RecomendacoesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestimentosRoute = InvestimentosRouteImport.update({
+  id: '/investimentos',
+  path: '/investimentos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FundosRoute = FundosRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
+  '/investimentos': typeof InvestimentosRoute
   '/login': typeof LoginRoute
   '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
+  '/investimentos': typeof InvestimentosRoute
   '/login': typeof LoginRoute
   '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
+  '/investimentos': typeof InvestimentosRoute
   '/login': typeof LoginRoute
   '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
@@ -78,16 +87,25 @@ export interface FileRouteTypes {
     | '/'
     | '/carteira'
     | '/fundos'
+    | '/investimentos'
     | '/login'
     | '/recomendacoes'
     | '/simulador'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/carteira' | '/fundos' | '/login' | '/recomendacoes' | '/simulador'
+  to:
+    | '/'
+    | '/carteira'
+    | '/fundos'
+    | '/investimentos'
+    | '/login'
+    | '/recomendacoes'
+    | '/simulador'
   id:
     | '__root__'
     | '/'
     | '/carteira'
     | '/fundos'
+    | '/investimentos'
     | '/login'
     | '/recomendacoes'
     | '/simulador'
@@ -97,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CarteiraRoute: typeof CarteiraRoute
   FundosRoute: typeof FundosRoute
+  InvestimentosRoute: typeof InvestimentosRoute
   LoginRoute: typeof LoginRoute
   RecomendacoesRoute: typeof RecomendacoesRoute
   SimuladorRoute: typeof SimuladorRoute
@@ -123,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investimentos': {
+      id: '/investimentos'
+      path: '/investimentos'
+      fullPath: '/investimentos'
+      preLoaderRoute: typeof InvestimentosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fundos': {
@@ -153,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CarteiraRoute: CarteiraRoute,
   FundosRoute: FundosRoute,
+  InvestimentosRoute: InvestimentosRoute,
   LoginRoute: LoginRoute,
   RecomendacoesRoute: RecomendacoesRoute,
   SimuladorRoute: SimuladorRoute,
