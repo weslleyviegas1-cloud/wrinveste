@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Coins, Wallet, PiggyBank, Calendar, Radio, RefreshCw, FileDown } from "lucide-react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { usePortfolio } from "@/hooks/usePortfolio";
+import { usePortfolio, type PortfolioSnapshot } from "@/hooks/usePortfolio";
 import { brl, pct } from "@/lib/format";
 import { exportPortfolioPdf } from "@/lib/exportPdf";
 
@@ -43,27 +43,29 @@ const PIE_COLORS = [
   "oklch(0.65 0.22 350)",
 ];
 
-function buildIncomeProjection(monthly: number, alreadyReceived: number) {
-  // Próximos 12 meses de renda acumulada (a partir do que já foi recebido)
-  const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  const today = new Date();
-  const out: { m: string; v: number }[] = [];
-  out.push({ m: "Hoje", v: alreadyReceived });
-  for (let i = 1; i <= 12; i++) {
-    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    out.push({ m: monthsLabels[d.getMonth()], v: alreadyReceived + monthly * i });
-  }
-  return out;
+type HistoryRange = "1M" | "3M" | "6M" | "1A" | "Tudo";
+
+function buildPortfolioSeries(history: PortfolioSnapshot[], range: HistoryRange) {
+  const now = Date.now();
+  const days: Record<Exclude<HistoryRange, "Tudo">, number> = { "1M": 30, "3M": 90, "6M": 180, "1A": 365 };
+  const cutoff = range === "Tudo" ? 0 : now - days[range] * 24 * 60 * 60 * 1000;
+  return history
+    .filter((point) => new Date(point.capturedAt).getTime() >= cutoff)
+    .map((point) => ({
+      date: new Date(point.capturedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      timestamp: new Date(point.capturedAt).getTime(),
+      value: point.totalValue,
+      invested: point.investedValue,
+    }))
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 function Dashboard() {
-  const { positions, totals, ready, quotesLoading, quotesUpdatedAt, quotesError, refreshQuotes } = usePortfolio();
+  const { positions, totals, ready, history, quotesLoading, quotesUpdatedAt, quotesError, refreshQuotes } = usePortfolio();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
-  const series = useMemo(
-    () => buildIncomeProjection(totals.monthly || 0, totals.received || 0),
-    [totals.monthly, totals.received]
-  );
+  const [historyRange, setHistoryRange] = useState<HistoryRange>("1M");
+  const series = useMemo(() => buildPortfolioSeries(history, historyRange), [history, historyRange]);
 
   const pieData = positions.map((p) => ({ name: p.ticker, value: p.current }));
   const profitPositive = totals.profit >= 0;
@@ -86,7 +88,7 @@ function Dashboard() {
             </span>
             <Radio className="h-3 w-3" />
             <span className="tabular">
-              {quotesError ? "Sem conexão" : updatedLabel ? `Cotações ao vivo · ${updatedLabel}` : "Buscando cotações..."}
+              {quotesError ? "Sem conexão" : updatedLabel ? `Última consulta · ${updatedLabel}` : "Consultando cotações..."}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -186,52 +188,50 @@ function Dashboard() {
           </div>
         ) : (
           <>
-            <div className="mt-5 flex items-end justify-between">
+            <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Projeção de renda passiva acumulada
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Próximos 12 meses · {brl(totals.monthly)}/mês
-                </p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Evolução do patrimônio</p>
+                <p className="text-xs text-muted-foreground">Histórico registrado · {series.length} pontos</p>
               </div>
-              <p className="text-right text-[10px] uppercase tracking-widest text-primary">
-                + {brl(totals.yearly)} em 12m
-              </p>
+              <div className="flex gap-1 rounded-full bg-white/5 p-1">
+                {(["1M", "3M", "6M", "1A", "Tudo"] as HistoryRange[]).map((range) => (
+                  <button key={range} onClick={() => setHistoryRange(range)}
+                    className={`rounded-full px-2 py-1 text-[10px] transition ${historyRange === range ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                    {range}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="-mx-2 mt-3 h-36">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={series} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0.6} />
-                      <stop offset="100%" stopColor="oklch(0.78 0.22 145)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="m" tick={{ fill: "oklch(0.7 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis hide domain={[0, "dataMax"]} />
-                  <Tooltip
-                    cursor={{ stroke: "oklch(1 0 0 / 0.15)", strokeWidth: 1 }}
-                    contentStyle={{
-                      background: "oklch(0.18 0 0 / 0.95)",
-                      border: "1px solid oklch(1 0 0 / 0.1)",
-                      borderRadius: 12,
-                      color: "oklch(0.985 0 0)",
-                      fontSize: 12,
-                    }}
-                    formatter={(v) => [brl(Number(v)), "Acumulado"]}
-                    labelStyle={{ color: "oklch(0.7 0 0)" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="v"
-                    stroke="oklch(0.78 0.22 145)"
-                    strokeWidth={2.5}
-                    fill="url(#g1)"
-                    animationDuration={1100}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="-mx-2 mt-3 h-40">
+              {series.length < 2 ? (
+                <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-white/10 px-4 text-center">
+                  <p className="text-sm font-medium">Histórico sendo construído</p>
+                  <p className="mt-1 max-w-md text-xs text-muted-foreground">
+                    {series.length === 1
+                      ? "O primeiro registro foi salvo. Novos pontos serão adicionados após as próximas atualizações de cotação."
+                      : "Ainda não há registros históricos. O gráfico começará a ganhar forma após as primeiras capturas."}
+                  </p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={series} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="portfolioHistoryFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#eab308" stopOpacity={0.42} />
+                        <stop offset="100%" stopColor="#eab308" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{ fill: "oklch(0.7 0 0)", fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={24} />
+                    <YAxis hide domain={["dataMin - 10", "dataMax + 10"]} />
+                    <Tooltip
+                      contentStyle={{ background: "oklch(0.18 0 0 / 0.96)", border: "1px solid oklch(1 0 0 / 0.1)", borderRadius: 12, color: "oklch(0.985 0 0)", fontSize: 12 }}
+                      formatter={(value, name) => [brl(Number(value)), name === "invested" ? "Total investido" : "Patrimônio"]}
+                    />
+                    <Area type="monotone" dataKey="invested" stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 4" fill="none" dot={false} />
+                    <Area type="monotone" dataKey="value" stroke="#eab308" strokeWidth={2.5} fill="url(#portfolioHistoryFill)" dot={false} activeDot={{ r: 4 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </>
         )}

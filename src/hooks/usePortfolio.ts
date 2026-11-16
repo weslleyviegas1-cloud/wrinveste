@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { getFII } from "@/data/fiis";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,14 @@ export interface Position {
 }
 
 const KEY = "fii.portfolio.v1";
+const HISTORY_KEY = "wr.portfolio.history.v1";
+const SNAPSHOT_INTERVAL_MS = 30 * 60_000;
+
+export interface PortfolioSnapshot {
+  capturedAt: string;
+  totalValue: number;
+  investedValue: number;
+}
 
 function readLocal(): Position[] {
   if (typeof window === "undefined") return [];
@@ -34,6 +42,8 @@ export function usePortfolio() {
   const { user, loading: authLoading } = useAuth();
   const [positions, setPositions] = useState<Position[]>([]);
   const [ready, setReady] = useState(false);
+  const [history, setHistory] = useState<PortfolioSnapshot[]>([]);
+  const lastSnapshotAttempt = useRef(0);
 
   // Carrega/sync conforme estado do usuário
   useEffect(() => {
@@ -168,6 +178,42 @@ export function usePortfolio() {
     }
   }, [user]);
 
+  // Carrega apenas snapshots reais já registrados; nunca inventa histórico retroativo.
+  useEffect(() => {
+    if (authLoading) return;
+    let cancelled = false;
+    async function loadHistory() {
+      if (!user) {
+        try {
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(HISTORY_KEY) : null;
+          const parsed = raw ? JSON.parse(raw) : [];
+          if (!cancelled) setHistory(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          if (!cancelled) setHistory([]);
+        }
+        return;
+      }
+      const { data, error } = await supabase
+        .from("portfolio_snapshots")
+        .select("captured_at,total_value,invested_value")
+        .order("captured_at", { ascending: true })
+        .limit(500);
+      if (cancelled) return;
+      if (error) {
+        console.error("[portfolio_snapshots] load error", error);
+        setHistory([]);
+        return;
+      }
+      setHistory((data ?? []).map((row: any) => ({
+        capturedAt: row.captured_at,
+        totalValue: Number(row.total_value),
+        investedValue: Number(row.invested_value),
+      })));
+    }
+    loadHistory();
+    return () => { cancelled = true; };
+  }, [user, authLoading]);
+
   // Cotações em tempo real (server function -> brapi.dev, refresh 60s)
   const tickers = useMemo(() => positions.map((p) => p.ticker), [positions]);
   const { quotes, loading: quotesLoading, error: quotesError, updatedAt: quotesUpdatedAt, refresh: refreshQuotes } =
@@ -252,6 +298,44 @@ export function usePortfolio() {
   const profitPct = totals.invested > 0 ? (profit / totals.invested) * 100 : 0;
   const yearly = totals.monthly * 12;
   const yieldOnCost = totals.invested > 0 ? (yearly / totals.invested) * 100 : 0;
+
+  // Registra no máximo um ponto a cada 30 minutos, somente após uma resposta de cotação.
+  useEffect(() => {
+    if (!ready || !quotesUpdatedAt || positions.length === 0 || totals.current <= 0) return;
+    const nowMs = Date.now();
+    if (nowMs - lastSnapshotAttempt.current < SNAPSHOT_INTERVAL_MS) return;
+    lastSnapshotAttempt.current = nowMs;
+    const snapshot: PortfolioSnapshot = {
+      capturedAt: new Date().toISOString(),
+      totalValue: Number(totals.current.toFixed(2)),
+      investedValue: Number(totals.invested.toFixed(2)),
+    };
+    if (!user) {
+      setHistory((current) => {
+        const next = [...current, snapshot].slice(-500);
+        try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+      return;
+    }
+    supabase.from("portfolio_snapshots").insert({
+      user_id: user.id,
+      total_value: snapshot.totalValue,
+      invested_value: snapshot.investedValue,
+      captured_at: snapshot.capturedAt,
+    }).select("captured_at,total_value,invested_value").single().then(({ data, error }) => {
+      if (error) {
+        console.error("[portfolio_snapshots] insert error", error);
+        return;
+      }
+      if (data) setHistory((current) => [...current, {
+        capturedAt: data.captured_at,
+        totalValue: Number(data.total_value),
+        investedValue: Number(data.invested_value),
+      }].slice(-500));
+    });
+  }, [ready, quotesUpdatedAt, positions.length, totals.current, totals.invested, user]);
+
 
   const withWeights = enriched.map((p) => ({
     ...p,
