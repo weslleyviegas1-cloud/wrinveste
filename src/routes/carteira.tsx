@@ -36,7 +36,8 @@ function Carteira() {
   const { quotes, loading: symbolQuoteLoading, error: symbolQuoteError, updatedAt: symbolQuoteUpdatedAt, refresh: refreshSymbolQuote } = useQuotes(isMarket && validSymbol ? [normalizedSymbol] : []);
   const quote = quotes[normalizedSymbol];
   const quoteFresh = Boolean(quote && Number.isFinite(Date.parse(quote.updatedAt)) && Date.now() - Date.parse(quote.updatedAt) < 5 * 60_000);
-  const unitPrice = quoteFresh ? quote!.price : moneyNumber(manualPrice);
+  const enteredUnitPrice = moneyNumber(manualPrice);
+  const unitPrice = enteredUnitPrice > 0 ? enteredUnitPrice : quoteFresh ? quote!.price : 0;
   const desiredAmount = moneyNumber(amount);
   const quantity = entryMode === "amount"
     ? (unitPrice > 0 && desiredAmount > 0 ? (category === "CRIPTO" ? Math.floor((desiredAmount / unitPrice) * 1e8) / 1e8 : Math.floor(desiredAmount / unitPrice)) : 0)
@@ -105,7 +106,7 @@ function Carteira() {
         <div className="wr-entry-mode"><button type="button" className={entryMode === "amount" ? "active" : ""} onClick={() => setEntryMode("amount")}><Calculator size={15} /> Investir por valor</button><button type="button" className={entryMode === "quantity" ? "active" : ""} onClick={() => setEntryMode("quantity")}>Informar quantidade</button></div>
         {entryMode === "amount" ? <label>Quanto deseja investir (R$)<input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex.: 1.000,00" /></label> :
           <label>Quantidade de cotas / ações<input inputMode="decimal" value={shares} onChange={e => setShares(e.target.value)} placeholder="Ex.: 10" /></label>}
-        {!quoteFresh && <label>Seu preço de compra por unidade (R$)<input inputMode="decimal" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder="Informe o preço se não houver cotação" /></label>}
+        <label>Preço unitário de compra (R$)<input inputMode="decimal" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder={quoteFresh ? "Em branco para usar a cotação consultada" : "Informe o preço se não houver cotação"} /><small className="wr-field-help">{quoteFresh ? "A cotação é preenchida automaticamente. Informe outro preço somente se quiser registrar o preço efetivo da sua compra." : "Sem cotação disponível: informe o preço do comprovante ou extrato."}</small></label>
         <div className="wr-calculation-preview">
           <div><span>Preço utilizado no cálculo</span><b>{unitPrice > 0 ? brl(unitPrice) : "Aguardando preço"}</b></div>
           <div><span>{entryMode === "amount" ? "Quantidade calculada" : "Quantidade informada"}</span><b>{quantity > 0 ? num(quantity, 6) : "—"}</b></div>
@@ -113,7 +114,7 @@ function Carteira() {
           {entryMode === "amount" && <div><span>Saldo não utilizado</span><b>{brl(unusedAmount)}</b></div>}
         </div>
         <p className="wr-data-disclaimer">O sistema registra a posição e calcula o preço médio ponderado em novas compras do mesmo ativo na mesma instituição. Não envia ordens à corretora. Para títulos e produtos sem cotação pública, o preço precisa vir do comprovante ou extrato da instituição.</p>
-        <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !normalizedSymbol || !name.trim() || quantity <= 0 || unitPrice <= 0 || (entryMode === "amount" && desiredAmount < unitPrice)}>Salvar investimento na carteira</button>
+        <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !normalizedSymbol || !name.trim() || quantity <= 0 || unitPrice <= 0 || (isMarket && !Number.isInteger(quantity)) || (entryMode === "amount" && desiredAmount < unitPrice)}>Salvar investimento na carteira</button>
       </form>
     </div>}
     <aside className="wr-invest-note"><b>Patrimônio consolidado e integração</b><p>Esta carteira acompanha as posições cadastradas aqui. Para consultar aplicações manuais de renda fixa e outras instituições já registradas, acesse <Link to="/patrimonio">Meu Patrimônio <ExternalLink size={13} /></Link>. A conexão automática com XP, Inter e outros bancos ainda depende de integrações oficiais e autorização do titular.</p></aside>
