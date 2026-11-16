@@ -196,8 +196,8 @@ function Dashboard() {
           <>
             <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Evolução do patrimônio</p>
-                <p className="text-xs text-muted-foreground">Histórico registrado · {series.length} pontos</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Evolução da carteira de FIIs</p>
+                <p className="text-xs text-muted-foreground">Histórico dos FIIs registrado · {series.length} pontos</p>
               </div>
               <div className="flex gap-1 rounded-full bg-white/5 p-1">
                 {(["1M", "3M", "6M", "1A", "Tudo"] as HistoryRange[]).map((range) => (
