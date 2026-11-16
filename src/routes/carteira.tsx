@@ -1,340 +1,64 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Eraser } from "lucide-react";
-import { useState } from "react";
-
+import { useMemo, useState } from "react";
+import { Plus, Trash2, RefreshCw, Wallet, Search } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
-import { usePortfolio } from "@/hooks/usePortfolio";
-import { FIIS, getFII } from "@/data/fiis";
+import { usePortfolio, encodeAsset, ASSET_LABELS, type AssetCategory } from "@/hooks/usePortfolio";
 import { brl, num, pct } from "@/lib/format";
-import { useQuotes } from "@/hooks/useQuotes";
+import { FIIS } from "@/data/fiis";
 
 export const Route = createFileRoute("/carteira")({
-  head: () => ({
-    meta: [
-      { title: "Carteira — WR Investe" },
-      { name: "description", content: "Gerencie seus Fundos Imobiliários e acompanhe o desempenho." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Carteira — WR Investimentos" }, { name: "description", content: "Acompanhe investimentos de diferentes classes em uma carteira consolidada." }] }),
   component: Carteira,
 });
-
-type Mode = "valor" | "cotas";
-
+const categories = Object.keys(ASSET_LABELS) as AssetCategory[];
+const marketCategories: AssetCategory[] = ["FII","ACAO","ETF","BDR","CRIPTO"];
 function Carteira() {
-  const { positions, totals, addOrUpdate, remove, clearAll } = usePortfolio();
-  const [open, setOpen] = useState(false);
-  const [ticker, setTicker] = useState("MXRF11");
-  const [mode, setMode] = useState<Mode>("valor");
-  const [valor, setValor] = useState("");
-  const [cotas, setCotas] = useState("");
-  const [precoMedio, setPrecoMedio] = useState("");
-
-  // Cotação ao vivo do ticker selecionado no modal
-  const { quotes: liveQuotes, loading: liveLoading } = useQuotes(open ? [ticker] : []);
-  const livePrice = liveQuotes[ticker]?.price;
-
-  function handleAdd(e: React.FormEvent) {
+  const {positions,totals,addOrUpdate,remove,quotesLoading,quotesError,quotesUpdatedAt,refreshQuotes,ready}=usePortfolio();
+  const [open,setOpen]=useState(false);
+  const [category,setCategory]=useState<AssetCategory>("ACAO");
+  const [symbol,setSymbol]=useState("PETR4");
+  const [name,setName]=useState("Petrobras");
+  const [shares,setShares]=useState("10");
+  const [price,setPrice]=useState("");
+  const [query,setQuery]=useState("");
+  const filtered=useMemo(()=>positions.filter(p=>!query||[p.name,p.symbol,ASSET_LABELS[p.category]].join(" ").toLowerCase().includes(query.toLowerCase())),[positions,query]);
+  const isMarket=marketCategories.includes(category);
+  function submit(e:React.FormEvent){
     e.preventDefault();
-    const fii = getFII(ticker);
-    if (!fii) return;
-    const price = parseFloat(precoMedio) || livePrice || fii.price;
-    let shares = 0;
-    if (mode === "valor") {
-      const v = parseFloat(valor);
-      if (!v || price <= 0) return;
-      shares = v / price;
-    } else {
-      shares = parseFloat(cotas);
-    }
-    if (!shares || shares <= 0) return;
-    addOrUpdate(ticker, shares, price);
-    setOpen(false);
-    setValor("");
-    setCotas("");
-    setPrecoMedio("");
+    const qty=Number(shares.replace(",","."));
+    const unit=Number(price.replace(",","."));
+    if(!name.trim()||!symbol.trim()||qty<=0||unit<=0)return;
+    const key=category==="FII"?symbol.trim().toUpperCase():encodeAsset(category,symbol,name);
+    void addOrUpdate(key,qty,unit);
+    setOpen(false);setPrice("");
   }
-
-  return (
-    <div className="px-5 sm:px-8">
-      <AppHeader title="Carteira" subtitle={`${positions.length} fundos · ${brl(totals.current)}`} />
-
-      <div className="flex gap-2">
-        <motion.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setOpen(true)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow-green)] transition-transform"
-        >
-          <Plus className="h-4 w-4" /> Adicionar Fundo
-        </motion.button>
-        {positions.length > 0 && (
-          <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => {
-              if (confirm("Tem certeza que deseja zerar toda a carteira? Esta ação não pode ser desfeita.")) {
-                clearAll();
-              }
-            }}
-            className="flex items-center justify-center gap-2 rounded-2xl glass px-4 text-xs font-semibold text-muted-foreground transition-colors hover:text-danger"
-            title="Zerar carteira"
-          >
-            <Eraser className="h-4 w-4" />
-          </motion.button>
-        )}
-      </div>
-
-      <section className="mt-5 space-y-3">
-        {positions.length === 0 ? (
-          <div className="rounded-2xl glass p-8 text-center text-sm text-muted-foreground">
-            Nenhum fundo na carteira. Adicione seu primeiro FII.
-          </div>
-        ) : (
-          positions.map((p, i) => (
-            <motion.article
-              key={p.ticker}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              whileHover={{ y: -2 }}
-              className="group relative overflow-hidden rounded-2xl glass p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display text-base font-semibold">{p.ticker}</h3>
-                    <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {p.fii.segment}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{p.fii.name}</p>
-                </div>
-                <button
-                  onClick={() => remove(p.ticker)}
-                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger"
-                  aria-label="Remover"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-                <Mini label="Cotas" value={num(p.shares, 2)} />
-                <Mini label="Investido" value={brl(p.invested)} />
-                <Mini label="Atual" value={brl(p.current)} />
-                <Mini
-                  label="Resultado"
-                  value={`${p.profit >= 0 ? "+" : ""}${pct(p.profitPct)}`}
-                  tone={p.profit >= 0 ? "success" : "danger"}
-                />
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Dividendos / mês
-                  </p>
-                  <p className="text-sm font-semibold tabular text-primary">
-                    {brl(p.monthlyDividend)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Já recebido {p.monthsHeld > 0 ? `(${p.monthsHeld}m)` : ""}
-                  </p>
-                  <p className="text-sm font-semibold tabular text-primary">
-                    {brl(p.received)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Retorno total
-                  </p>
-                  <p className={`text-sm font-semibold tabular ${p.totalReturn >= 0 ? "text-success" : "text-danger"}`}>
-                    {brl(p.totalReturn)} ({pct(p.totalReturnPct)})
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    % carteira
-                  </p>
-                  <p className="text-sm font-semibold tabular">{pct(p.weight, 1)}</p>
-                </div>
-              </div>
-
-              <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/5">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(p.weight, 100)}%` }}
-                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                  className="h-full gradient-primary"
-                />
-              </div>
-            </motion.article>
-          ))
-        )}
-      </section>
-
-      {/* MODAL */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
-            onClick={() => setOpen(false)}
-          >
-            <motion.form
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              onClick={(e) => e.stopPropagation()}
-              onSubmit={handleAdd}
-              className="w-full max-w-md rounded-t-3xl glass-strong p-5 sm:rounded-3xl"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-lg font-semibold">Adicionar Fundo</h3>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-white/5"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <label className="mt-4 block text-xs uppercase tracking-wider text-muted-foreground">
-                Ticker
-              </label>
-              <select
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-primary/50"
-              >
-                {FIIS.map((f) => (
-                  <option key={f.ticker} value={f.ticker} className="bg-[#1a1a1a]">
-                    {f.ticker} — {f.name}
-                  </option>
-                ))}
-              </select>
-
-              <div className="mt-4 inline-flex w-full rounded-xl bg-white/5 p-1">
-                {(["valor", "cotas"] as Mode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setMode(m)}
-                    className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                      mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    Por {m}
-                  </button>
-                ))}
-              </div>
-
-              {mode === "valor" ? (
-                <Field
-                  label="Valor investido (R$)"
-                  type="number"
-                  step="0.01"
-                  value={valor}
-                  onChange={setValor}
-                  placeholder="1000"
-                />
-              ) : (
-                <Field
-                  label="Quantidade de cotas"
-                  type="number"
-                  step="1"
-                  value={cotas}
-                  onChange={setCotas}
-                  placeholder="100"
-                />
-              )}
-
-              <Field
-                label={`Preço médio (opcional · ${
-                  liveLoading && !livePrice
-                    ? "buscando..."
-                    : livePrice
-                    ? `ao vivo ${brl(livePrice)}`
-                    : `ref. ${brl(getFII(ticker)?.price ?? 0)}`
-                })`}
-                type="number"
-                step="0.01"
-                value={precoMedio}
-                onChange={setPrecoMedio}
-                placeholder={livePrice ? livePrice.toFixed(2) : "auto"}
-              />
-              {mode === "valor" && valor && (livePrice || getFII(ticker)?.price) ? (
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  ≈ {num((parseFloat(valor) || 0) / (parseFloat(precoMedio) || livePrice || getFII(ticker)!.price), 4)} cotas
-                </p>
-              ) : null}
-
-              <button
-                type="submit"
-                className="mt-5 w-full rounded-xl gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow-green)]"
-              >
-                Adicionar à carteira
-              </button>
-            </motion.form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function Mini({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "success" | "danger";
-}) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p
-        className={`text-sm font-semibold tabular ${
-          tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  ...rest
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value">) {
-  return (
-    <label className="mt-4 block">
-      <span className="block text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <input
-        {...rest}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary/50"
-      />
-    </label>
-  );
+  return <div className="wr-portfolio-page">
+    <AppHeader title="Minha carteira" subtitle={ready?positions.length+" posições acompanhadas":"Carregando carteira…"}/>
+    <section className="wr-portfolio-summary">
+      <div><span>Patrimônio acompanhado</span><strong>{brl(totals.current)}</strong><small>Valor de mercado quando há cotação; custo de aquisição nos demais casos.</small></div>
+      <div><span>Total investido</span><strong>{brl(totals.invested)}</strong></div>
+      <div><span>Resultado de mercado</span><strong className={totals.profit>=0?"wr-positive":"wr-negative"}>{brl(totals.profit)} ({pct(totals.profitPct)})</strong></div>
+      <button type="button" onClick={()=>void refreshQuotes()} disabled={quotesLoading}><RefreshCw size={16}/>{quotesLoading?"Atualizando…":"Atualizar cotações"}</button>
+    </section>
+    <div className="wr-portfolio-toolbar"><div className="wr-invest-search"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar na carteira…"/></div><button type="button" className="wr-primary-link" onClick={()=>setOpen(true)}><Plus size={16}/> Adicionar investimento</button></div>
+    {quotesError&&<p className="wr-data-disclaimer">Não foi possível consultar algumas cotações agora. Valores sem cotação não são apresentados como preços atuais.</p>}
+    {quotesUpdatedAt&&<p className="wr-data-disclaimer">Última consulta ao provedor: {new Date(quotesUpdatedAt).toLocaleString("pt-BR")}. Isso não significa cotação em tempo real.</p>}
+    {filtered.length===0?<div className="wr-invest-note"><Wallet size={24}/><b>{positions.length?"Nenhum resultado encontrado":"Sua carteira ainda está vazia"}</b><p>Adicione ações, FIIs, ETFs, BDRs, títulos e outros investimentos para acompanhar tudo em um só lugar.</p></div>:
+    <div className="wr-portfolio-list">{filtered.map(p=><article className="wr-portfolio-row" key={p.ticker}>
+      <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{ASSET_LABELS[p.category]}</span><h3>{p.name}</h3><small>{p.symbol}</small></div><button type="button" onClick={()=>void remove(p.ticker)} aria-label="Remover investimento"><Trash2 size={16}/></button></div>
+      <div className="wr-portfolio-metrics"><div><span>Quantidade</span><b>{num(p.shares,4)}</b></div><div><span>Preço médio</span><b>{brl(p.avgPrice)}</b></div><div><span>Preço atual / referência</span><b>{brl(p.currentPrice)}</b></div><div><span>Valor da posição</span><b>{brl(p.current)}</b></div><div><span>Resultado</span><b className={p.profit>=0?"wr-positive":"wr-negative"}>{brl(p.profit)} ({pct(p.profitPct)})</b></div></div>
+      <div className="wr-portfolio-status"><span>{p.live?"Cotação retornada pelo provedor":p.priceStatus==="cost_basis"?"Sem marcação de mercado: custo de aquisição":"Cotação indisponível: custo de aquisição"}</span>{p.change!==null&&<b className={p.change>=0?"wr-positive":"wr-negative"}>{p.change>=0?"+":""}{p.change.toFixed(2).replace(".",",")}%</b>}</div>
+      {p.monthlyDividend!==null&&<div className="wr-portfolio-income"><span>Proventos mensais indicativos da posição</span><b>{brl(p.monthlyDividend)}</b></div>}
+    </article>)}</div>}
+    {open&&<div className="wr-invest-modal-backdrop" onClick={()=>setOpen(false)}><form className="wr-invest-modal wr-portfolio-form" onSubmit={submit} onClick={e=>e.stopPropagation()}>
+      <button type="button" className="wr-invest-modal-close" onClick={()=>setOpen(false)}>×</button><p className="wr-eyebrow">NOVA POSIÇÃO</p><h2>Adicionar investimento</h2>
+      <label>Classe de investimento<select value={category} onChange={e=>{const c=e.target.value as AssetCategory;setCategory(c);if(c==="FII"){setSymbol("MXRF11");setName("Maxi Renda");}else{setSymbol(c==="ACAO"?"PETR4":c==="ETF"?"IVVB11":c==="BDR"?"AAPL34":c==="CRIPTO"?"BTC-USD":"");setName("");}}}>{categories.map(c=><option key={c} value={c}>{ASSET_LABELS[c]}</option>)}</select></label>
+      {category==="FII"?<label>Fundo imobiliário<select value={symbol} onChange={e=>{setSymbol(e.target.value);setName(FIIS.find(f=>f.ticker===e.target.value)?.name??e.target.value);}}>{FIIS.map(f=><option key={f.ticker} value={f.ticker}>{f.ticker} — {f.name}</option>)}</select></label>:<><label>Ticker ou identificador<input value={symbol} onChange={e=>setSymbol(e.target.value.toUpperCase())} placeholder={isMarket?"Ex.: PETR4, IVVB11, AAPL34":"Código ou identificação do título"}/></label><label>Nome / emissor<input value={name} onChange={e=>setName(e.target.value)} placeholder="Nome do investimento ou emissor"/></label></>}
+      <label>Quantidade / unidades<input inputMode="decimal" value={shares} onChange={e=>setShares(e.target.value)} placeholder="10"/></label>
+      <label>{isMarket?"Preço médio de aquisição por unidade (R$)":"Valor aplicado por unidade (R$)"}<input inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value)} placeholder="100,00"/></label>
+      <p className="wr-data-disclaimer">{isMarket?"A cotação será consultada quando o ticker for coberto pelo provedor. O preço informado serve para calcular o resultado.":"Registro manual: saldo, taxa contratada, marcação e pagamentos ainda não vêm automaticamente da instituição."}</p>
+      <button type="submit" className="wr-primary-link" disabled={!symbol.trim()||!name.trim()||Number(shares.replace(",","."))<=0||Number(price.replace(",","."))<=0}>Salvar na carteira</button>
+    </form></div>}
+    <aside className="wr-invest-note"><b>Atualização e integração</b><p>Ações, FIIs, ETFs, BDRs e criptoativos usam a última cotação retornada pelo provedor, quando disponível. Para renda fixa, fundos não listados, previdência e COE, a posição é manual e usa o custo informado até haver integração de dados da instituição. A conexão XP/Open Finance ainda não está ativa.</p></aside>
+  </div>;
 }
