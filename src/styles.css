@@ -61,7 +61,7 @@
   --popover: oklch(0.18 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.65 0.21 145); /* green #00E676 */
+  --primary: oklch(0.82 0.17 88); /* WR gold */
   --primary-foreground: oklch(0.13 0 0);
 
   --secondary: oklch(0.22 0 0);
@@ -70,7 +70,7 @@
   --muted: oklch(0.22 0 0);
   --muted-foreground: oklch(0.7 0 0);
 
-  --accent: oklch(0.62 0.22 260); /* blue #2979FF */
+  --accent: oklch(0.76 0.15 82); /* warm gold */
   --accent-foreground: oklch(0.985 0 0);
 
   --destructive: oklch(0.65 0.23 25);
@@ -85,7 +85,7 @@
 
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.65 0.21 145);
+  --ring: oklch(0.82 0.17 88);
 
   --chart-1: oklch(0.78 0.22 145);
   --chart-2: oklch(0.62 0.22 260);
@@ -94,12 +94,11 @@
   --chart-5: oklch(0.7 0.2 30);
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, oklch(0.78 0.22 145) 0%, oklch(0.62 0.22 200) 100%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.9 0.16 95) 0%, oklch(0.72 0.16 78) 100%);
   --gradient-accent: linear-gradient(135deg, oklch(0.62 0.22 260) 0%, oklch(0.55 0.25 300) 100%);
   --gradient-danger: linear-gradient(135deg, oklch(0.68 0.24 22) 0%, oklch(0.55 0.25 350) 100%);
   --gradient-card: linear-gradient(160deg, oklch(0.22 0.01 260 / 0.7) 0%, oklch(0.16 0.005 260 / 0.5) 100%);
-  --gradient-hero: radial-gradient(ellipse at top left, oklch(0.65 0.21 145 / 0.18), transparent 60%),
-                   radial-gradient(ellipse at bottom right, oklch(0.62 0.22 260 / 0.18), transparent 60%);
+  --gradient-hero: radial-gradient(ellipse at top left, oklch(0.82 0.17 88 / 0.08), transparent 58%), radial-gradient(ellipse at bottom right, oklch(0.6 0.03 70 / 0.06), transparent 60%);
 
   /* Shadows */
   --shadow-glow-green: 0 10px 40px -10px oklch(0.78 0.22 145 / 0.5);
@@ -111,12 +110,12 @@
 
   --sidebar: oklch(0.16 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.65 0.21 145);
+  --sidebar-primary: oklch(0.82 0.17 88);
   --sidebar-primary-foreground: oklch(0.13 0 0);
   --sidebar-accent: oklch(0.22 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.65 0.21 145);
+  --sidebar-ring: oklch(0.82 0.17 88);
 }
 
 .dark {
@@ -216,4 +215,30 @@
 
 #lovable-badge {
   display: none !important;
+}
+
+
+/* WR desktop fintech shell */
+.wr-app-shell { min-height:100vh; background:#080808; }
+.wr-sidebar { position:fixed; inset:0 auto 0 0; z-index:40; width:148px; display:flex; flex-direction:column; align-items:stretch; padding:20px 12px; background:#090909; border-right:1px solid rgba(255,255,255,.09); }
+.wr-brand { height:82px; display:flex; align-items:center; justify-content:center; gap:0; position:relative; color:#f7f7f7; font-family:var(--font-display); font-size:34px; font-weight:800; letter-spacing:-5px; }
+.wr-brand-r { color:#e9b900; }
+.wr-brand svg { color:#f0c400; margin-left:-2px; margin-top:-22px; }
+.wr-side-nav { display:flex; flex-direction:column; gap:7px; margin-top:18px; }
+.wr-side-link { min-height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; border-radius:12px; color:#a1a1aa; font-size:12px; font-weight:500; transition:background .18s ease,color .18s ease; }
+.wr-side-link:hover { background:rgba(255,255,255,.045); color:#fff; }
+.wr-side-link.active { color:#f3c400; background:linear-gradient(90deg,rgba(234,190,0,.15),rgba(234,190,0,.035)); box-shadow:inset 3px 0 #efc400; }
+.wr-sidebar-foot { margin-top:auto; display:flex; align-items:center; gap:9px; padding:12px 8px; border:1px solid rgba(255,255,255,.09); border-radius:12px; color:#a1a1aa; font-size:10px; line-height:1.45; }
+.wr-foot-mark { color:#f0c400; font-weight:800; font-size:15px; }
+.wr-main { margin-left:148px; min-height:100vh; padding:18px 24px 30px; }
+.wr-content { width:100%; max-width:1600px; margin:0 auto; }
+.wr-content > div { padding-left:8px; padding-right:8px; }
+.wr-mobile-nav { display:none; }
+@media (max-width:767px) {
+ .wr-sidebar { display:none; }
+ .wr-main { margin-left:0; padding:0 0 92px; }
+ .wr-content > div { padding-left:18px; padding-right:18px; }
+ .wr-mobile-nav { position:fixed; z-index:50; left:10px; right:10px; bottom:calc(8px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-around; gap:2px; padding:8px 5px; border:1px solid rgba(255,255,255,.1); border-radius:18px; background:rgba(17,17,17,.94); backdrop-filter:blur(22px); box-shadow:0 12px 40px rgba(0,0,0,.5); }
+ .wr-mobile-link { min-width:0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px 2px; color:#929292; font-size:10px; }
+ .wr-mobile-link.active { color:#f0c400; }
 }
