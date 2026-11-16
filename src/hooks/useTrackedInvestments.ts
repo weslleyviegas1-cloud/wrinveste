@@ -66,5 +66,5 @@ export function useTrackedInvestments() {
     setItems(prev=>prev.filter(x=>x.id!==id));return true;
   },[user,items]);
   const totals=useMemo(()=>items.reduce((a,x)=>({invested:a.invested+x.investedAmount,current:a.current+x.currentValue}),{invested:0,current:0}),[items]);
-  return {items,loading,error,totals,add,update,remove,reload,cloudSynced:!!user};
+  return {items,loading,error,totals,add,update,remove,reload,cloudSynced:!!user && !error};
 }
