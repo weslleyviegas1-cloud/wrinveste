@@ -376,3 +376,25 @@
 .wr-invest-modal li{padding:10px;border:1px solid #2c2c2c;border-radius:10px;background:#141414;color:#ddd;font-size:12px}
 .wr-invest-modal-note{margin:18px 0;padding:13px;border-left:2px solid #e8c300;background:#e8c3000d;color:#c9c9c9;font-size:12px;line-height:1.6}
 @media(max-width:700px){.wr-invest-sync{align-items:flex-start;flex-wrap:wrap}.wr-invest-sync .wr-risk-pill{margin-left:56px}.wr-invest-modal{padding:22px}.wr-invest-modal ul{grid-template-columns:1fr}}
+
+
+/* Market quote and income estimator */
+.wr-live-quote-panel,.wr-income-calculator{margin:20px 0;padding:22px;border:1px solid #292929;border-radius:18px;background:linear-gradient(145deg,#151515,#0b0b0b);box-shadow:0 12px 35px #0003}
+.wr-live-quote-title{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+.wr-live-quote-title h2,.wr-income-calculator h2{margin:4px 0;font-size:20px;font-weight:700;color:#f5f5f5}
+.wr-live-quote-controls{display:flex;gap:10px;margin-bottom:14px}
+.wr-live-quote-controls input,.wr-income-fields input{width:100%;min-width:0;padding:12px 14px;border:1px solid #303030;border-radius:11px;background:#101010;color:#f4f4f4;outline:none}
+.wr-live-quote-controls input:focus,.wr-income-fields input:focus{border-color:#d6b500;box-shadow:0 0 0 2px #d6b50022}
+.wr-live-quote-controls button{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;padding:0 16px;border-radius:11px;background:#e2bd00;color:#111;font-size:12px;font-weight:700}
+.wr-live-quote-controls button:disabled{opacity:.5;cursor:not-allowed}
+.wr-live-quote-result,.wr-income-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.wr-live-quote-result>div,.wr-income-results>div{display:flex;flex-direction:column;gap:8px;min-width:0;padding:13px;border:1px solid #292929;border-radius:12px;background:#101010}
+.wr-live-quote-result span,.wr-income-results span{color:#999;font-size:11px;line-height:1.4}
+.wr-live-quote-result strong,.wr-income-results strong{color:#f4f4f4;font-size:15px;overflow-wrap:anywhere}
+.wr-positive{color:#20c879!important}.wr-negative{color:#ff625f!important}
+.wr-income-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.wr-income-fields label{display:flex;flex-direction:column;gap:7px;color:#aaa;font-size:11px}
+.wr-income-results>div strong{color:#e8c300;font-size:18px}
+.wr-data-disclaimer{margin-top:12px;color:#888;font-size:10px;line-height:1.65}
+@media(max-width:850px){.wr-live-quote-result,.wr-income-results{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-income-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.wr-live-quote-panel,.wr-income-calculator{padding:16px}.wr-live-quote-title{align-items:flex-start;flex-direction:column}.wr-live-quote-controls{flex-direction:column}.wr-live-quote-controls button{min-height:42px}.wr-live-quote-result,.wr-income-results{grid-template-columns:1fr 1fr}.wr-income-fields{grid-template-columns:1fr 1fr}}
