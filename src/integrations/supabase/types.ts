@@ -13,7 +13,13 @@ export type Database = {
     PostgrestVersion: "14.5"
   }
   public: {
-    Tables: {\n      tracked_investments: {\n        Row: { id:string; user_id:string; institution:string; category:string; product_name:string; ticker:string|null; invested_amount:number; current_value:number; annual_rate:number|null; rate_index:string|null; liquidity:string; start_date:string|null; maturity_date:string|null; notes:string|null; valuation_mode:string; created_at:string; updated_at:string }\n        Insert: { id?:string; user_id:string; institution:string; category:string; product_name:string; ticker?:string|null; invested_amount?:number; current_value?:number; annual_rate?:number|null; rate_index?:string|null; liquidity?:string; start_date?:string|null; maturity_date?:string|null; notes?:string|null; valuation_mode?:string; created_at?:string; updated_at?:string }\n        Update: { id?:string; user_id?:string; institution?:string; category?:string; product_name?:string; ticker?:string|null; invested_amount?:number; current_value?:number; annual_rate?:number|null; rate_index?:string|null; liquidity?:string; start_date?:string|null; maturity_date?:string|null; notes?:string|null; valuation_mode?:string; created_at?:string; updated_at?:string }\n        Relationships: []\n      }
+    Tables: {
+      tracked_investments: {
+        Row: { id:string; user_id:string; institution:string; category:string; product_name:string; ticker:string|null; invested_amount:number; current_value:number; annual_rate:number|null; rate_index:string|null; liquidity:string; start_date:string|null; maturity_date:string|null; notes:string|null; valuation_mode:string; created_at:string; updated_at:string }
+        Insert: { id?:string; user_id:string; institution:string; category:string; product_name:string; ticker?:string|null; invested_amount?:number; current_value?:number; annual_rate?:number|null; rate_index?:string|null; liquidity?:string; start_date?:string|null; maturity_date?:string|null; notes?:string|null; valuation_mode?:string; created_at?:string; updated_at?:string }
+        Update: { id?:string; user_id?:string; institution?:string; category?:string; product_name?:string; ticker?:string|null; invested_amount?:number; current_value?:number; annual_rate?:number|null; rate_index?:string|null; liquidity?:string; start_date?:string|null; maturity_date?:string|null; notes?:string|null; valuation_mode?:string; created_at?:string; updated_at?:string }
+        Relationships: []
+      }
       portfolio_snapshots: {
         Row: { captured_at: string; id: string; invested_value: number; total_value: number; user_id: string }
         Insert: { captured_at?: string; id?: string; invested_value: number; total_value: number; user_id: string }
