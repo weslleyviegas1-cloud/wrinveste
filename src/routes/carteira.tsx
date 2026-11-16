@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio, encodeAsset, ASSET_LABELS, type AssetCategory } from "@/hooks/usePortfolio";
 import { useQuotes } from "@/hooks/useQuotes";
+import { useTrackedInvestments } from "@/hooks/useTrackedInvestments";
 import { brl, num, pct } from "@/lib/format";
 import { FIIS, getFII } from "@/data/fiis";
 
@@ -20,6 +21,7 @@ const moneyNumber = (value: string) => {
 };
 function Carteira() {
   const { positions, totals, addOrUpdate, remove, quotesLoading, quotesError, quotesUpdatedAt, refreshQuotes, ready } = usePortfolio();
+  const { items: manualItems, totals: manualTotals, add: addManual, remove: removeManual, loading: manualLoading } = useTrackedInvestments();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<AssetCategory>("FII");
   const [symbol, setSymbol] = useState("MXRF11");
@@ -29,6 +31,13 @@ function Carteira() {
   const [amount, setAmount] = useState("1000");
   const [shares, setShares] = useState("100");
   const [manualPrice, setManualPrice] = useState("");
+  const [manualCurrentValue, setManualCurrentValue] = useState("");
+  const [annualRate, setAnnualRate] = useState("");
+  const [rateIndex, setRateIndex] = useState("");
+  const [liquidity, setLiquidity] = useState("Diária");
+  const [startDate, setStartDate] = useState("");
+  const [maturityDate, setMaturityDate] = useState("");
+  const [notes, setNotes] = useState("");
   const [query, setQuery] = useState("");
   const isMarket = marketCategories.includes(category);
   const normalizedSymbol = symbol.trim().toUpperCase();
@@ -45,6 +54,10 @@ function Carteira() {
   const calculatedTotal = quantity > 0 && unitPrice > 0 ? quantity * unitPrice : 0;
   const unusedAmount = entryMode === "amount" && desiredAmount > 0 ? Math.max(0, desiredAmount - calculatedTotal) : 0;
   const filtered = useMemo(() => positions.filter(p => !query || [p.name, p.symbol, p.institution || "", ASSET_LABELS[p.category]].join(" ").toLowerCase().includes(query.toLowerCase())), [positions, query]);
+  const consolidatedInvested = totals.invested + manualTotals.invested;
+  const consolidatedCurrent = totals.current + manualTotals.current;
+  const consolidatedProfit = consolidatedCurrent - consolidatedInvested;
+  const consolidatedProfitPct = consolidatedInvested > 0 ? consolidatedProfit / consolidatedInvested * 100 : 0;
 
   useEffect(() => {
     if (category === "FII") {
@@ -58,21 +71,45 @@ function Carteira() {
   function resetForm() {
     setCategory("FII"); setSymbol("MXRF11"); setName("Maxi Renda"); setInstitution("");
     setEntryMode("amount"); setAmount("1000"); setShares("100"); setManualPrice("");
+    setManualCurrentValue(""); setAnnualRate(""); setRateIndex(""); setLiquidity("Diária"); setStartDate(""); setMaturityDate(""); setNotes("");
   }
   function openForm() { resetForm(); setOpen(true); }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !normalizedSymbol || !institution.trim() || quantity <= 0 || unitPrice <= 0) return;
+    if (!name.trim() || !institution.trim()) return;
+    if (!isMarket) {
+      const investedAmount = desiredAmount;
+      const currentValue = manualCurrentValue.trim() ? moneyNumber(manualCurrentValue) : investedAmount;
+      if (investedAmount <= 0 || currentValue < 0) return;
+      const saved = await addManual({
+        institution: institution.trim(),
+        category: ASSET_LABELS[category],
+        productName: name.trim(),
+        ticker: normalizedSymbol || undefined,
+        investedAmount,
+        currentValue,
+        annualRate: annualRate.trim() ? moneyNumber(annualRate) : null,
+        rateIndex: rateIndex.trim(),
+        liquidity,
+        startDate,
+        maturityDate,
+        notes,
+        valuationMode: "manual",
+      });
+      if (saved) setOpen(false);
+      return;
+    }
+    if (!normalizedSymbol || quantity <= 0 || unitPrice <= 0 || (isMarket && !Number.isInteger(quantity))) return;
     const key = encodeAsset(category, normalizedSymbol, name, institution);
     await addOrUpdate(key, quantity, unitPrice, institution.trim());
     setOpen(false);
   }
   return <div className="wr-portfolio-page">
-    <AppHeader title="Minha carteira" subtitle={ready ? positions.length + " posições acompanhadas" : "Carregando carteira…"} />
+    <AppHeader title="Minha carteira" subtitle={ready && !manualLoading ? (positions.length + manualItems.length) + " posições acompanhadas" : "Carregando carteira…"} />
     <section className="wr-portfolio-summary">
-      <div><span>Patrimônio acompanhado</span><strong>{brl(totals.current)}</strong><small>Valor de mercado quando há cotação recente; custo de aquisição nos demais casos.</small></div>
-      <div><span>Total investido</span><strong>{brl(totals.invested)}</strong></div>
-      <div><span>Resultado de mercado</span><strong className={totals.profit >= 0 ? "wr-positive" : "wr-negative"}>{brl(totals.profit)} ({pct(totals.profitPct)})</strong></div>
+      <div><span>Patrimônio acompanhado</span><strong>{brl(consolidatedCurrent)}</strong><small>Inclui ativos cotados e aplicações cadastradas manualmente.</small></div>
+      <div><span>Total investido</span><strong>{brl(consolidatedInvested)}</strong></div>
+      <div><span>Resultado consolidado</span><strong className={consolidatedProfit >= 0 ? "wr-positive" : "wr-negative"}>{brl(consolidatedProfit)} ({pct(consolidatedProfitPct)})</strong></div>
       <button type="button" onClick={() => void refreshQuotes()} disabled={quotesLoading}><RefreshCw size={16} />{quotesLoading ? "Atualizando…" : "Atualizar cotações"}</button>
     </section>
     <div className="wr-portfolio-toolbar">
@@ -88,6 +125,14 @@ function Carteira() {
         <div className="wr-portfolio-status"><span>{p.live ? "Cotação consultada recentemente pelo provedor" : p.priceStatus === "cost_basis" ? "Sem marcação de mercado: custo de aquisição" : "Cotação indisponível: exibindo custo de aquisição"}</span>{p.change !== null && <b className={p.change >= 0 ? "wr-positive" : "wr-negative"}>{p.change >= 0 ? "+" : ""}{p.change.toFixed(2).replace(".", ",")}%</b>}</div>
         {p.monthlyDividend !== null && <div className="wr-portfolio-income"><span>Proventos mensais indicativos da posição</span><b>{brl(p.monthlyDividend)}</b></div>}
       </article>)}</div>}
+    {manualItems.length > 0 && <section className="wr-portfolio-manual-section">
+      <div className="wr-portfolio-manual-heading"><h2>Renda fixa e outras aplicações</h2><span>{manualItems.length} registros</span></div>
+      {manualItems.map(item => <article className="wr-portfolio-row" key={item.id}>
+        <div className="wr-portfolio-row-head"><div><span className="wr-risk-pill">{item.category}</span><h3>{item.productName}</h3><small>{item.institution}{item.ticker ? " · " + item.ticker : ""}</small></div><button type="button" onClick={() => { if (confirm("Excluir esta aplicação do seu patrimônio?")) void removeManual(item.id); }} aria-label="Remover aplicação"><Trash2 size={16} /></button></div>
+        <div className="wr-portfolio-metrics"><div><span>Valor aplicado</span><b>{brl(item.investedAmount)}</b></div><div><span>Valor atual</span><b>{brl(item.currentValue)}</b></div><div><span>Resultado</span><b className={item.currentValue >= item.investedAmount ? "wr-positive" : "wr-negative"}>{brl(item.currentValue - item.investedAmount)}</b></div><div><span>Liquidez</span><b>{item.liquidity}</b></div><div><span>Taxa / indexador</span><b>{item.annualRate != null ? item.annualRate + "% " + (item.rateIndex || "a.a.") : item.rateIndex || "—"}</b></div></div>
+        <div className="wr-portfolio-status"><span>{item.valuationMode === "manual" ? "Valor atualizado conforme extrato informado" : "Valor estimado"}</span>{item.maturityDate && <b>Vencimento: {new Date(item.maturityDate + "T12:00:00").toLocaleDateString("pt-BR")}</b>}</div>
+      </article>)}
+    </section>}
     {open && <div className="wr-invest-modal-backdrop" onClick={() => setOpen(false)}>
       <form className="wr-invest-modal wr-portfolio-form" onSubmit={submit} onClick={e => e.stopPropagation()}>
         <button type="button" className="wr-invest-modal-close" onClick={() => setOpen(false)}>×</button>
@@ -96,25 +141,37 @@ function Carteira() {
         <label>Banco ou corretora<input value={institution} onChange={e => setInstitution(e.target.value)} placeholder="Ex.: Banco Inter, XP, Nubank" required maxLength={100} /></label>
         <label>Classe de investimento<select value={category} onChange={e => { const c = e.target.value as AssetCategory; setCategory(c); setSymbol(c === "FII" ? "MXRF11" : ""); setName(c === "FII" ? "Maxi Renda" : ""); setManualPrice(""); }}>{categories.map(c => <option key={c} value={c}>{ASSET_LABELS[c]}</option>)}</select></label>
         {category === "FII" ? <label>Fundo imobiliário<select value={symbol} onChange={e => setSymbol(e.target.value)}>{FIIS.map(f => <option key={f.ticker} value={f.ticker}>{f.ticker} — {f.name}</option>)}</select></label> :
-          <label>Código / ticker<input value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))} placeholder="Ex.: PETR4, VALE3, IVVB11" /></label>}
-        <label>Nome do ativo<input value={name} onChange={e => setName(e.target.value)} placeholder="Preenchido automaticamente quando a fonte informar" required /></label>
-        {isMarket && <div className="wr-quote-inline">
-          <div><span>Preço de mercado consultado</span><strong>{quoteFresh ? brl(quote!.price) : symbolQuoteLoading ? "Consultando…" : "Indisponível"}</strong></div>
-          <button type="button" onClick={() => void refreshSymbolQuote()} disabled={!validSymbol || symbolQuoteLoading}><RefreshCw size={14} /> Atualizar</button>
-          <small>{quoteFresh ? "Fonte: " + quote!.source + (quote!.marketTime ? " · Última negociação: " + new Date(quote!.marketTime).toLocaleString("pt-BR") : "") : symbolQuoteError ? "A fonte não retornou cotação. Você pode informar seu preço de compra manualmente." : "A cotação depende da cobertura do provedor e pode ter atraso."}</small>
-        </div>}
-        <div className="wr-entry-mode"><button type="button" className={entryMode === "amount" ? "active" : ""} onClick={() => setEntryMode("amount")}><Calculator size={15} /> Investir por valor</button><button type="button" className={entryMode === "quantity" ? "active" : ""} onClick={() => setEntryMode("quantity")}>Informar quantidade</button></div>
-        {entryMode === "amount" ? <label>Quanto deseja investir (R$)<input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex.: 1.000,00" /></label> :
-          <label>Quantidade de cotas / ações<input inputMode="decimal" value={shares} onChange={e => setShares(e.target.value)} placeholder="Ex.: 10" /></label>}
-        <label>Preço unitário de compra (R$)<input inputMode="decimal" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder={quoteFresh ? "Em branco para usar a cotação consultada" : "Informe o preço se não houver cotação"} /><small className="wr-field-help">{quoteFresh ? "A cotação é preenchida automaticamente. Informe outro preço somente se quiser registrar o preço efetivo da sua compra." : "Sem cotação disponível: informe o preço do comprovante ou extrato."}</small></label>
-        <div className="wr-calculation-preview">
-          <div><span>Preço utilizado no cálculo</span><b>{unitPrice > 0 ? brl(unitPrice) : "Aguardando preço"}</b></div>
-          <div><span>{entryMode === "amount" ? "Quantidade calculada" : "Quantidade informada"}</span><b>{quantity > 0 ? num(quantity, 6) : "—"}</b></div>
-          <div><span>Total da posição</span><b>{calculatedTotal > 0 ? brl(calculatedTotal) : "—"}</b></div>
-          {entryMode === "amount" && <div><span>Saldo não utilizado</span><b>{brl(unusedAmount)}</b></div>}
-        </div>
-        <p className="wr-data-disclaimer">O sistema registra a posição e calcula o preço médio ponderado em novas compras do mesmo ativo na mesma instituição. Não envia ordens à corretora. Para títulos e produtos sem cotação pública, o preço precisa vir do comprovante ou extrato da instituição.</p>
-        <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !normalizedSymbol || !name.trim() || quantity <= 0 || unitPrice <= 0 || (isMarket && !Number.isInteger(quantity)) || (entryMode === "amount" && desiredAmount < unitPrice)}>Salvar investimento na carteira</button>
+          <label>Código / ticker (opcional para aplicações sem código)<input value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))} placeholder={isMarket ? "Ex.: PETR4, VALE3, IVVB11" : "Código, ticker ou deixe vazio"} /></label>}
+        <label>Nome do ativo / produto<input value={name} onChange={e => setName(e.target.value)} placeholder="Preenchido automaticamente quando a fonte informar" required /></label>
+        {isMarket ? <>
+          <div className="wr-quote-inline">
+            <div><span>Preço de mercado consultado</span><strong>{quoteFresh ? brl(quote!.price) : symbolQuoteLoading ? "Consultando…" : "Indisponível"}</strong></div>
+            <button type="button" onClick={() => void refreshSymbolQuote()} disabled={!validSymbol || symbolQuoteLoading}><RefreshCw size={14} /> Atualizar</button>
+            <small>{quoteFresh ? "Fonte: " + quote!.source + (quote!.marketTime ? " · Última negociação: " + new Date(quote!.marketTime).toLocaleString("pt-BR") : "") : symbolQuoteError ? "A fonte não retornou cotação. Você pode informar seu preço de compra manualmente." : "A cotação depende da cobertura do provedor e pode ter atraso."}</small>
+          </div>
+          <div className="wr-entry-mode"><button type="button" className={entryMode === "amount" ? "active" : ""} onClick={() => setEntryMode("amount")}><Calculator size={15} /> Investir por valor</button><button type="button" className={entryMode === "quantity" ? "active" : ""} onClick={() => setEntryMode("quantity")}>Informar quantidade</button></div>
+          {entryMode === "amount" ? <label>Quanto deseja investir (R$)<input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex.: 1.000,00" /></label> :
+            <label>Quantidade de cotas / ações<input inputMode="decimal" value={shares} onChange={e => setShares(e.target.value)} placeholder="Ex.: 10" /></label>}
+          <label>Preço unitário de compra (R$)<input inputMode="decimal" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder={quoteFresh ? "Em branco para usar a cotação consultada" : "Informe o preço se não houver cotação"} /><small className="wr-field-help">{quoteFresh ? "A cotação é preenchida automaticamente. Informe outro preço somente se quiser registrar o preço efetivo da sua compra." : "Sem cotação disponível: informe o preço do comprovante ou extrato."}</small></label>
+          <div className="wr-calculation-preview">
+            <div><span>Preço utilizado no cálculo</span><b>{unitPrice > 0 ? brl(unitPrice) : "Aguardando preço"}</b></div>
+            <div><span>{entryMode === "amount" ? "Quantidade calculada" : "Quantidade informada"}</span><b>{quantity > 0 ? num(quantity, 6) : "—"}</b></div>
+            <div><span>Total da posição</span><b>{calculatedTotal > 0 ? brl(calculatedTotal) : "—"}</b></div>
+            {entryMode === "amount" && <div><span>Saldo não utilizado</span><b>{brl(unusedAmount)}</b></div>}
+          </div>
+          <p className="wr-data-disclaimer">O sistema calcula o preço médio ponderado em novas compras do mesmo ativo na mesma instituição. Não envia ordens à corretora.</p>
+          <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !normalizedSymbol || !name.trim() || quantity <= 0 || unitPrice <= 0 || !Number.isInteger(quantity) || (entryMode === "amount" && desiredAmount < unitPrice)}>Salvar investimento na carteira</button>
+        </> : <>
+          <label>Valor aplicado (R$)<input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex.: 1.000,00" /></label>
+          <label>Valor atual (R$)<input inputMode="decimal" value={manualCurrentValue} onChange={e => setManualCurrentValue(e.target.value)} placeholder="Deixe vazio para repetir o valor aplicado" /></label>
+          <div className="wr-portfolio-two-fields"><label>Taxa anual (%)<input inputMode="decimal" value={annualRate} onChange={e => setAnnualRate(e.target.value)} placeholder="Opcional" /></label><label>Indexador<input value={rateIndex} onChange={e => setRateIndex(e.target.value)} placeholder="CDI, IPCA, prefixado" /></label></div>
+          <label>Liquidez<select value={liquidity} onChange={e => setLiquidity(e.target.value)}>{["Diária","Imediata","No vencimento","Após carência","Sem liquidez / não informado"].map(v => <option key={v}>{v}</option>)}</select></label>
+          <div className="wr-portfolio-two-fields"><label>Data da aplicação<input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label><label>Vencimento<input type="date" value={maturityDate} onChange={e => setMaturityDate(e.target.value)} /></label></div>
+          <label>Observações<textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength={1000} rows={3} placeholder="Informações complementares do investimento" /></label>
+          <div className="wr-calculation-preview"><div><span>Resultado registrado</span><b>{brl((manualCurrentValue.trim() ? moneyNumber(manualCurrentValue) : desiredAmount) - desiredAmount)}</b></div><div><span>Valor consolidado</span><b>{brl(manualCurrentValue.trim() ? moneyNumber(manualCurrentValue) : desiredAmount)}</b></div></div>
+          <p className="wr-data-disclaimer">Para CDB, LCI/LCA, Tesouro, previdência e produtos sem cotação pública, informe o valor atual conforme o extrato da instituição. O WR não inventa rentabilidade nem consulta o saldo bancário.</p>
+          <button type="submit" className="wr-primary-link" disabled={!institution.trim() || !name.trim() || desiredAmount <= 0 || (manualCurrentValue.trim() && moneyNumber(manualCurrentValue) < 0)}>Salvar aplicação na carteira</button>
+        </>}
       </form>
     </div>}
     <aside className="wr-invest-note"><b>Patrimônio consolidado e integração</b><p>Esta carteira acompanha as posições cadastradas aqui. Para consultar aplicações manuais de renda fixa e outras instituições já registradas, acesse <Link to="/patrimonio">Meu Patrimônio <ExternalLink size={13} /></Link>. A conexão automática com XP, Inter e outros bancos ainda depende de integrações oficiais e autorização do titular.</p></aside>
