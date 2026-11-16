@@ -14,8 +14,7 @@ function csvCell(v:unknown){return '"'+String(v??"").replace(/"/g,'""')+'"';}
 function exportCsv(items:TrackedInvestment[]){
  const header=["Instituição","Categoria","Produto","Código","Valor aplicado","Valor atual","Resultado","Taxa anual (%)","Indexador","Liquidez","Data aplicação","Vencimento","Método de atualização"];
  const rows=items.map(x=>[x.institution,x.category,x.productName,x.ticker||"",x.investedAmount.toFixed(2),x.currentValue.toFixed(2),(x.currentValue-x.investedAmount).toFixed(2),x.annualRate??"",x.rateIndex||"",x.liquidity,x.startDate||"",x.maturityDate||"",x.valuationMode]);
- const content="\uFEFF"+[header,...rows].map(r=>r.map(csvCell).join(";")).join("\r
-");
+ const content="\uFEFF"+[header,...rows].map(r=>r.map(csvCell).join(";")).join("\r\n");
  const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="wr-investe-patrimonio.csv";a.click();URL.revokeObjectURL(url);
 }
 function exportPdf(items:TrackedInvestment[], invested:number, current:number){
