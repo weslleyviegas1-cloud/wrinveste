@@ -11,6 +11,8 @@ export interface FII {
   consistency: number; // 0-10
   volatility: number; // 0-10 (menor = melhor)
   segment: string;
+  /** Indica se os indicadores de análise vieram da base curada, não de valores padrão. */
+  metricsVerified?: boolean;
 }
 
 // Curated FIIs com metadados ricos (score, consistência, etc.)
@@ -270,9 +272,10 @@ function buildExtras(): FII[] {
   });
 }
 
-export const FIIS: FII[] = [...CURATED, ...buildExtras()].sort((a, b) =>
-  a.ticker.localeCompare(b.ticker)
-);
+export const FIIS: FII[] = [
+  ...CURATED.map((f) => ({ ...f, metricsVerified: true })),
+  ...buildExtras().map((f) => ({ ...f, metricsVerified: false })),
+].sort((a, b) => a.ticker.localeCompare(b.ticker));
 
 export function getFII(ticker: string): FII | undefined {
   return FIIS.find((f) => f.ticker === ticker.toUpperCase());
