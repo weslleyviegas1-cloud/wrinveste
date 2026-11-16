@@ -242,3 +242,18 @@
  .wr-mobile-link { min-width:0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px 2px; color:#929292; font-size:10px; }
  .wr-mobile-link.active { color:#f0c400; }
 }
+
+
+/* Dashboard desktop composition inspired by WR reference */
+.wr-dashboard { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr); gap:16px; align-content:start; }
+.wr-dashboard > :first-child { grid-column:1 / -1; }
+.wr-dashboard > section:nth-of-type(1) { grid-column:1; grid-row:2; min-width:0; }
+.wr-dashboard > section:nth-of-type(2) { grid-column:1; grid-row:3; min-width:0; }
+.wr-dashboard > section:nth-of-type(3) { grid-column:2; grid-row:2 / span 2; min-width:0; align-self:stretch; }
+.wr-dashboard > section:nth-of-type(n+4) { grid-column:1 / -1; min-width:0; }
+.wr-dashboard .glass, .wr-dashboard .glass-strong { border-color:rgba(255,255,255,.09); }
+.wr-dashboard .gradient-primary { background-image:linear-gradient(110deg,#f6d329,#b88b00); }
+@media (max-width:900px) {
+ .wr-dashboard { display:flex; flex-direction:column; gap:14px; }
+ .wr-dashboard > section { width:100%; }
+}
