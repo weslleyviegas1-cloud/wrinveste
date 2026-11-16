@@ -14,7 +14,7 @@ import { Route as RecomendacoesRouteImport } from './routes/recomendacoes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FundosRouteImport } from './routes/fundos'
 import { Route as CarteiraRouteImport } from './routes/carteira'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as IndexRouteImport } from './routes/index'\nimport { Route as PatrimonioRouteImport } from './routes/patrimonio'
 
 const SimuladorRoute = SimuladorRouteImport.update({
   id: '/simulador',
@@ -41,7 +41,7 @@ const CarteiraRoute = CarteiraRouteImport.update({
   path: '/carteira',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const PatrimonioRoute = PatrimonioRouteImport.update({\n  id: '/patrimonio',\n  path: '/patrimonio',\n  getParentRoute: () => rootRouteImport,\n} as any)\nconst IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
@@ -51,7 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/carteira': typeof CarteiraRoute
   '/fundos': typeof FundosRoute
-  '/login': typeof LoginRoute
+  '/login': typeof LoginRoute\n  '/patrimonio': typeof PatrimonioRoute\n  '/patrimonio': typeof PatrimonioRoute
   '/recomendacoes': typeof RecomendacoesRoute
   '/simulador': typeof SimuladorRoute
 }
@@ -78,7 +78,7 @@ export interface FileRouteTypes {
     | '/'
     | '/carteira'
     | '/fundos'
-    | '/login'
+    | '/login'\n    | '/patrimonio'\n    | '/patrimonio'\n    | '/patrimonio'
     | '/recomendacoes'
     | '/simulador'
   fileRoutesByTo: FileRoutesByTo
@@ -97,7 +97,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CarteiraRoute: typeof CarteiraRoute
   FundosRoute: typeof FundosRoute
-  LoginRoute: typeof LoginRoute
+  LoginRoute: typeof LoginRoute\n  PatrimonioRoute: typeof PatrimonioRoute
   RecomendacoesRoute: typeof RecomendacoesRoute
   SimuladorRoute: typeof SimuladorRoute
 }
@@ -118,7 +118,7 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecomendacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
+    '/patrimonio': {\n      id: '/patrimonio'\n      path: '/patrimonio'\n      fullPath: '/patrimonio'\n      preLoaderRoute: typeof PatrimonioRouteImport\n      parentRoute: typeof rootRouteImport\n    }\n    '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
@@ -153,7 +153,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CarteiraRoute: CarteiraRoute,
   FundosRoute: FundosRoute,
-  LoginRoute: LoginRoute,
+  LoginRoute: LoginRoute,\n  PatrimonioRoute: PatrimonioRoute,
   RecomendacoesRoute: RecomendacoesRoute,
   SimuladorRoute: SimuladorRoute,
 }
