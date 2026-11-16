@@ -398,3 +398,34 @@
 .wr-data-disclaimer{margin-top:12px;color:#888;font-size:10px;line-height:1.65}
 @media(max-width:850px){.wr-live-quote-result,.wr-income-results{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-income-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.wr-live-quote-panel,.wr-income-calculator{padding:16px}.wr-live-quote-title{align-items:flex-start;flex-direction:column}.wr-live-quote-controls{flex-direction:column}.wr-live-quote-controls button{min-height:42px}.wr-live-quote-result,.wr-income-results{grid-template-columns:1fr 1fr}.wr-income-fields{grid-template-columns:1fr 1fr}}
+
+
+/* Multi-asset portfolio */
+.wr-portfolio-page{padding:0 24px 36px;color:#f5f5f5}
+.wr-portfolio-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:14px;align-items:center;margin:18px 0;padding:20px;border:1px solid #292929;border-radius:18px;background:linear-gradient(120deg,#151515,#0b0b0b)}
+.wr-portfolio-summary>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wr-portfolio-summary span,.wr-portfolio-metrics span,.wr-portfolio-income span{font-size:11px;color:#999}
+.wr-portfolio-summary strong{font-size:clamp(18px,2vw,26px);font-weight:700;overflow-wrap:anywhere}
+.wr-portfolio-summary small{font-size:10px;color:#888;line-height:1.4}
+.wr-portfolio-summary button,.wr-portfolio-toolbar>button{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border:1px solid #b99b00;border-radius:11px;color:#e8c300;font-size:12px;font-weight:700}
+.wr-portfolio-toolbar{display:flex;gap:12px;align-items:center;margin:18px 0}
+.wr-portfolio-toolbar .wr-invest-search{flex:1;margin:0}
+.wr-portfolio-list{display:grid;gap:12px}
+.wr-portfolio-row{padding:18px;border:1px solid #292929;border-radius:16px;background:linear-gradient(145deg,#151515,#0c0c0c)}
+.wr-portfolio-row-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.wr-portfolio-row-head h3{margin:8px 0 2px;font-size:16px;font-weight:700}
+.wr-portfolio-row-head small{color:#999;font-size:11px}
+.wr-portfolio-row-head>button{padding:8px;color:#999}
+.wr-portfolio-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:16px 0}
+.wr-portfolio-metrics>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.wr-portfolio-metrics b{font-size:13px;overflow-wrap:anywhere}
+.wr-portfolio-status{display:flex;justify-content:space-between;gap:10px;padding-top:11px;border-top:1px solid #252525;color:#929292;font-size:10px}
+.wr-portfolio-income{display:flex;justify-content:space-between;gap:10px;margin-top:10px;padding:10px 12px;border-radius:10px;background:#e4c0000c}
+.wr-portfolio-income b{color:#e8c300;font-size:13px}
+.wr-portfolio-form{display:grid;gap:12px}
+.wr-portfolio-form label{display:grid;gap:6px;color:#aaa;font-size:11px}
+.wr-portfolio-form input,.wr-portfolio-form select{width:100%;padding:11px 12px;border:1px solid #303030;border-radius:10px;background:#111;color:#f5f5f5;outline:none}
+.wr-portfolio-form .wr-primary-link{justify-content:center;background:#e3bf00;color:#111}
+.wr-portfolio-form .wr-primary-link:disabled{opacity:.45}
+@media(max-width:850px){.wr-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-portfolio-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.wr-portfolio-page{padding:0 14px 28px}.wr-portfolio-summary{grid-template-columns:1fr 1fr;padding:14px}.wr-portfolio-toolbar{align-items:stretch;flex-direction:column}.wr-portfolio-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-portfolio-row{padding:14px}}
