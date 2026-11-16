@@ -33,9 +33,9 @@ export const Route = createFileRoute("/")({
 });
 
 const PIE_COLORS = [
-  "oklch(0.78 0.22 145)",
-  "oklch(0.62 0.22 260)",
-  "oklch(0.78 0.18 80)",
+  "oklch(0.86 0.17 92)",
+  "oklch(0.68 0.12 265)",
+  "oklch(0.78 0.15 72)",
   "oklch(0.7 0.22 320)",
   "oklch(0.7 0.2 30)",
   "oklch(0.7 0.18 200)",
@@ -73,7 +73,7 @@ function Dashboard() {
     : null;
 
   return (
-    <div className="px-5 sm:px-8">
+    <div className="wr-dashboard px-5 sm:px-8">
       <AppHeader title="Olá, Investidor" subtitle="Sua visão geral de hoje" />
 
       {/* LIVE STATUS */}
@@ -225,7 +225,7 @@ function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="v"
-                    stroke="oklch(0.78 0.22 145)"
+                    stroke="oklch(0.88 0.17 92)"
                     strokeWidth={2.5}
                     fill="url(#g1)"
                     animationDuration={1100}
