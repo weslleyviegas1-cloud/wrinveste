@@ -25,6 +25,8 @@ export interface PortfolioPosition extends Position {
   live: boolean;
   change: number | null;
   priceStatus: "market" | "cost_basis" | "unavailable";
+  monthlyDividend:number|null;
+  yearlyDividend:number|null;
   fii: { name:string; segment:string; price:number; lastDividend:number; dividendYield:number };
   received:number;
   monthsHeld:number;
