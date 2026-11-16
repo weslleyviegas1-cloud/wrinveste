@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
-import { FIIS, getFII } from "@/data/fiis";
+import { FIIS } from "@/data/fiis";
 import { brl, num, pct } from "@/lib/format";
 import { useQuotes } from "@/hooks/useQuotes";
 
@@ -28,31 +28,26 @@ function Carteira() {
   const [mode, setMode] = useState<Mode>("valor");
   const [valor, setValor] = useState("");
   const [cotas, setCotas] = useState("");
-  const [precoMedio, setPrecoMedio] = useState("");
 
-  // Cotação ao vivo do ticker selecionado no modal
-  const { quotes: liveQuotes, loading: liveLoading } = useQuotes(open ? [ticker] : []);
+  // O preço de entrada vem exclusivamente da cotação obtida pelo serviço de mercado.
+  const { quotes: liveQuotes, loading: liveLoading, updatedAt: quotesUpdatedAt } = useQuotes(open ? [ticker] : []);
   const livePrice = liveQuotes[ticker]?.price;
+  const validLivePrice = typeof livePrice === "number" && Number.isFinite(livePrice) && livePrice > 0;
+  const requestedAmount = Number(valor);
+  const requestedShares = Number(cotas);
+  const calculatedShares = mode === "valor"
+    ? (validLivePrice && requestedAmount > 0 ? Math.floor(requestedAmount / livePrice) : 0)
+    : (Number.isInteger(requestedShares) && requestedShares > 0 ? requestedShares : 0);
+  const calculatedInvested = calculatedShares * (validLivePrice ? livePrice : 0);
+  const remainingAmount = mode === "valor" && requestedAmount > 0 ? Math.max(0, requestedAmount - calculatedInvested) : 0;
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    const fii = getFII(ticker);
-    if (!fii) return;
-    const price = parseFloat(precoMedio) || livePrice || fii.price;
-    let shares = 0;
-    if (mode === "valor") {
-      const v = parseFloat(valor);
-      if (!v || price <= 0) return;
-      shares = v / price;
-    } else {
-      shares = parseFloat(cotas);
-    }
-    if (!shares || shares <= 0) return;
-    addOrUpdate(ticker, shares, price);
+    if (!validLivePrice || calculatedShares <= 0) return;
+    addOrUpdate(ticker, calculatedShares, livePrice);
     setOpen(false);
     setValor("");
     setCotas("");
-    setPrecoMedio("");
   }
 
   return (
@@ -234,56 +229,67 @@ function Carteira() {
                       mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                     }`}
                   >
-                    Por {m}
+                    {m === "valor" ? "Por valor (R$)" : "Por quantidade"}
                   </button>
                 ))}
               </div>
 
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-muted-foreground">Cotação de mercado</span>
+                  <span className="text-sm font-semibold tabular">
+                    {liveLoading && !validLivePrice ? "Consultando..." : validLivePrice ? brl(livePrice) : "Indisponível"}
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {validLivePrice
+                    ? "Preço preenchido automaticamente pela última cotação disponível. Não é necessário informar preço manual."
+                    : "Aguardando cotação válida. O cadastro ficará indisponível até obter um preço para evitar valores incorretos."}
+                  {quotesUpdatedAt ? ` Atualizado na consulta: ${new Date(quotesUpdatedAt).toLocaleString("pt-BR")}.` : ""}
+                </p>
+              </div>
+
               {mode === "valor" ? (
                 <Field
-                  label="Valor investido (R$)"
+                  label="Quanto deseja investir (R$)"
                   type="number"
+                  min="0.01"
                   step="0.01"
                   value={valor}
                   onChange={setValor}
-                  placeholder="1000"
+                  placeholder="Ex.: 1000,00"
                 />
               ) : (
                 <Field
                   label="Quantidade de cotas"
                   type="number"
+                  min="1"
                   step="1"
                   value={cotas}
                   onChange={setCotas}
-                  placeholder="100"
+                  placeholder="Ex.: 10"
                 />
               )}
 
-              <Field
-                label={`Preço médio (opcional · ${
-                  liveLoading && !livePrice
-                    ? "buscando..."
-                    : livePrice
-                    ? `ao vivo ${brl(livePrice)}`
-                    : `ref. ${brl(getFII(ticker)?.price ?? 0)}`
-                })`}
-                type="number"
-                step="0.01"
-                value={precoMedio}
-                onChange={setPrecoMedio}
-                placeholder={livePrice ? livePrice.toFixed(2) : "auto"}
-              />
-              {mode === "valor" && valor && (livePrice || getFII(ticker)?.price) ? (
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  ≈ {num((parseFloat(valor) || 0) / (parseFloat(precoMedio) || livePrice || getFII(ticker)!.price), 4)} cotas
-                </p>
-              ) : null}
+              {validLivePrice && calculatedShares > 0 && (
+                <div className="mt-3 space-y-2 rounded-xl bg-primary/5 p-3 text-xs">
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Quantidade de cotas</span><b>{num(calculatedShares, 0)}</b></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Preço por cota</span><b>{brl(livePrice)}</b></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Total calculado</span><b className="text-primary">{brl(calculatedInvested)}</b></div>
+                  {mode === "valor" && remainingAmount > 0 && (
+                    <p className="border-t border-white/10 pt-2 text-[11px] text-muted-foreground">
+                      Saldo não utilizado: {brl(remainingAmount)}. FIIs são negociados em cotas inteiras no mercado à vista.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <button
                 type="submit"
-                className="mt-5 w-full rounded-xl gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow-green)]"
+                disabled={!validLivePrice || calculatedShares <= 0 || liveLoading}
+                className="mt-5 w-full rounded-xl gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow-green)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Adicionar à carteira
+                Adicionar {calculatedShares > 0 ? `${num(calculatedShares, 0)} cotas` : "à carteira"}
               </button>
             </motion.form>
           </motion.div>
