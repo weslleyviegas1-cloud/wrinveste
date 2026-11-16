@@ -3,7 +3,9 @@ import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTrackedInvestments, type InvestmentInput, type TrackedInvestment } from "@/hooks/useTrackedInvestments";
 import { brl, pct } from "@/lib/format";
-import { Plus, Trash2, Download, Building2, Wallet, FileSpreadsheet, X } from "lucide-react";
+import { Plus, Trash2, Download, Building2, X, FileDown } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const Route=createFileRoute("/patrimonio")({head:()=>({meta:[{title:"Patrimônio — WR Investe"},{name:"description",content:"Consolide seus investimentos de diferentes instituições em um só lugar."}]}),component:Patrimonio});
 const categories=["Renda fixa","FIIs","Ações","ETFs","Tesouro Direto","Fundos de investimento","Criptomoedas","Poupança","Previdência","Outros"];
@@ -15,7 +17,7 @@ function exportCsv(items:TrackedInvestment[]){
  const content="\uFEFF"+[header,...rows].map(r=>r.map(csvCell).join(";")).join("\r\n");
  const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="wr-investe-patrimonio.csv";a.click();URL.revokeObjectURL(url);
 }
-function Patrimonio(){
+function exportPdf(items:TrackedInvestment[], invested:number, current:number){\n const doc=new jsPDF({unit:"pt",format:"a4"}); const result=current-invested;\n doc.setFillColor(12,16,23);doc.rect(0,0,595,842,"F");\n doc.setTextColor(245,247,250);doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("WR Investe — Patrimônio consolidado",40,48);\n doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(160,170,185);doc.text("Gerado em "+new Date().toLocaleString("pt-BR"),40,68);\n doc.setFontSize(12);doc.setTextColor(245,247,250);doc.text("Valor atual: "+brl(current),40,105);doc.text("Total aplicado: "+brl(invested),230,105);doc.text("Resultado: "+brl(result),420,105);\n autoTable(doc,{startY:130,head:[["Instituição","Categoria","Produto","Aplicado","Valor atual","Liquidez"]],body:items.map(x=>[x.institution,x.category,x.productName,brl(x.investedAmount),brl(x.currentValue),x.liquidity]),theme:"grid",styles:{fontSize:8,cellPadding:6},headStyles:{fillColor:[25,90,65],textColor:255},margin:{left:40,right:40}});\n const y=(doc as any).lastAutoTable?.finalY||150;doc.setTextColor(160,170,185);doc.setFontSize(8);doc.text("Valores informados ou calculados no aplicativo; não são confirmação de saldo pelas instituições.",40,Math.min(y+28,810));\n doc.save("wr-investe-patrimonio-"+new Date().toISOString().slice(0,10)+".pdf");\n}\nfunction Patrimonio(){
  const {items,loading,error,totals,add,remove,cloudSynced}=useTrackedInvestments();
  const [open,setOpen]=useState(false);const [form,setForm]=useState<InvestmentInput>(blank);
  const [filter,setFilter]=useState("Todas");
@@ -37,7 +39,7 @@ function Patrimonio(){
  </section>
  <div className="mt-4 grid grid-cols-2 gap-2">
   <button onClick={()=>{setForm(blank);setOpen(true)}} className="flex items-center justify-center gap-2 rounded-xl gradient-primary px-3 py-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4"/>Adicionar investimento</button>
-  <button onClick={()=>exportCsv(items)} disabled={!items.length} className="flex items-center justify-center gap-2 rounded-xl glass px-3 py-3 text-sm font-semibold disabled:opacity-40"><Download className="h-4 w-4"/>Exportar CSV</button>
+  <button onClick={()=>exportCsv(items)} disabled={!items.length} className="flex items-center justify-center gap-2 rounded-xl glass px-3 py-3 text-sm font-semibold disabled:opacity-40"><Download className="h-4 w-4"/>CSV</button>\n  <button onClick={()=>exportPdf(items,totals.invested,totals.current)} disabled={!items.length} className="col-span-2 flex items-center justify-center gap-2 rounded-xl glass px-3 py-2.5 text-sm font-semibold disabled:opacity-40"><FileDown className="h-4 w-4"/>Baixar relatório PDF</button>
  </div>
  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground"><span>{items.length} aplicações cadastradas</span><span>{cloudSynced?"Sincronização na nuvem":"Salvo neste dispositivo"}</span></div>
  {error&&<p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-xs text-amber-200">{error}</p>}
