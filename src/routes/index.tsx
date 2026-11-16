@@ -18,6 +18,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio, type PortfolioSnapshot } from "@/hooks/usePortfolio";
 import { brl, pct } from "@/lib/format";
 import { exportPortfolioPdf } from "@/lib/exportPdf";
+import { useTrackedInvestments } from "@/hooks/useTrackedInvestments";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,6 +63,11 @@ function buildPortfolioSeries(history: PortfolioSnapshot[], range: HistoryRange)
 
 function Dashboard() {
   const { positions, totals, ready, history, quotesLoading, quotesUpdatedAt, quotesError, refreshQuotes } = usePortfolio();
+  const { totals: otherTotals } = useTrackedInvestments();
+  const consolidatedCurrent = totals.current + otherTotals.current;
+  const consolidatedInvested = totals.invested + otherTotals.invested;
+  const consolidatedProfit = consolidatedCurrent - consolidatedInvested;
+  const consolidatedProfitPct = consolidatedInvested > 0 ? consolidatedProfit / consolidatedInvested * 100 : 0;
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   const [historyRange, setHistoryRange] = useState<HistoryRange>("1M");
@@ -157,10 +163,10 @@ function Dashboard() {
         <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
 
-        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Patrimônio atual</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Patrimônio consolidado cadastrado</p>
         <div className="mt-1 flex items-baseline gap-3">
           <h2 className="font-display text-4xl font-semibold tracking-tight tabular sm:text-5xl">
-            {ready ? brl(totals.current) : "R$ —"}
+            {ready ? brl(consolidatedCurrent) : "R$ —"}
           </h2>
         </div>
         {!isEmpty && (
@@ -173,9 +179,9 @@ function Dashboard() {
               }`}
             >
               {profitPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-              {brl(Math.abs(totals.profit))} ({pct(totals.profitPct)})
+              {brl(Math.abs(consolidatedProfit))} ({pct(consolidatedProfitPct)})
             </div>
-            <span className="text-xs text-muted-foreground">vs. investido {brl(totals.invested)}</span>
+            <span className="text-xs text-muted-foreground">vs. investido {brl(consolidatedInvested)}</span>
           </div>
         )}
 
@@ -183,7 +189,7 @@ function Dashboard() {
           <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-5 text-center">
             <p className="text-sm font-medium">Você ainda não tem investimentos.</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Adicione seu primeiro fundo na aba Carteira para começar a acompanhar.
+              Cadastre investimentos em qualquer instituição na aba Patrimônio ou adicione seus FIIs na Carteira.
             </p>
           </div>
         ) : (
