@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTrackedInvestments, type InvestmentInput, type TrackedInvestment } from "@/hooks/useTrackedInvestments";
 import { brl, pct } from "@/lib/format";
-import { Plus, Trash2, Download, Building2, X, FileDown } from "lucide-react";
+import { Plus, Trash2, Download, Building2, X, FileDown, Pencil } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -28,14 +28,14 @@ function exportPdf(items:TrackedInvestment[], invested:number, current:number){
  doc.save("wr-investe-patrimonio-"+new Date().toISOString().slice(0,10)+".pdf");
 }
 function Patrimonio(){
- const {items,loading,error,totals,add,remove,cloudSynced}=useTrackedInvestments();
+ const {items,loading,error,totals,add,update,remove,cloudSynced}=useTrackedInvestments();\n const [editingId,setEditingId]=useState<string|null>(null);
  const [open,setOpen]=useState(false);const [form,setForm]=useState<InvestmentInput>(blank);
  const [filter,setFilter]=useState("Todas");
  const categoriesInUse=useMemo(()=>["Todas",...Array.from(new Set(items.map(x=>x.category)))],[items]);
  const visible=items.filter(x=>filter==="Todas"||x.category===filter);
  const result=totals.current-totals.invested;
  const set=(key:keyof InvestmentInput,value:any)=>setForm(p=>({...p,[key]:value}));
- async function submit(e:React.FormEvent){e.preventDefault();if(!form.institution.trim()||!form.productName.trim()||form.investedAmount<0||form.currentValue<0)return;const ok=await add({...form,institution:form.institution.trim(),productName:form.productName.trim()});if(ok){setForm(blank);setOpen(false);}}
+ async function submit(e:React.FormEvent){e.preventDefault();if(!form.institution.trim()||!form.productName.trim()||form.investedAmount<0||form.currentValue<0)return;const payload={...form,institution:form.institution.trim(),productName:form.productName.trim()};const ok=editingId?await update(editingId,payload):await add(payload);if(ok){setForm(blank);setEditingId(null);setOpen(false);}}\n function edit(item:TrackedInvestment){setEditingId(item.id);setForm({institution:item.institution,category:item.category,productName:item.productName,ticker:item.ticker||"",investedAmount:item.investedAmount,currentValue:item.currentValue,annualRate:item.annualRate??null,rateIndex:item.rateIndex||"",liquidity:item.liquidity,startDate:item.startDate||"",maturityDate:item.maturityDate||"",notes:item.notes||"",valuationMode:item.valuationMode});setOpen(true);}
  return <div className="px-5 pb-5 sm:px-8">
  <AppHeader title="Meu patrimônio" subtitle="Todos os seus investimentos, em um só lugar"/>
  <section className="rounded-3xl glass-strong p-5">
@@ -48,7 +48,7 @@ function Patrimonio(){
   <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">Soma dos valores atuais informados ou calculados neste aplicativo. Não representa saldo bancário confirmado nem consulta automática às instituições.</p>
  </section>
  <div className="mt-4 grid grid-cols-2 gap-2">
-  <button onClick={()=>{setForm(blank);setOpen(true)}} className="flex items-center justify-center gap-2 rounded-xl gradient-primary px-3 py-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4"/>Adicionar investimento</button>
+  <button onClick={()=>{setEditingId(null);setForm(blank);setOpen(true)}} className="flex items-center justify-center gap-2 rounded-xl gradient-primary px-3 py-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4"/>Adicionar investimento</button>
   <button onClick={()=>exportCsv(items)} disabled={!items.length} className="flex items-center justify-center gap-2 rounded-xl glass px-3 py-3 text-sm font-semibold disabled:opacity-40"><Download className="h-4 w-4"/>CSV</button>
   <button onClick={()=>exportPdf(items,totals.invested,totals.current)} disabled={!items.length} className="col-span-2 flex items-center justify-center gap-2 rounded-xl glass px-3 py-2.5 text-sm font-semibold disabled:opacity-40"><FileDown className="h-4 w-4"/>Baixar relatório PDF</button>
  </div>
@@ -58,14 +58,14 @@ function Patrimonio(){
  <div className="mt-5 flex gap-2 overflow-x-auto pb-1">{categoriesInUse.map(c=><button key={c} onClick={()=>setFilter(c)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs ${filter===c?"bg-primary text-primary-foreground":"glass text-muted-foreground"}`}>{c}</button>)}</div>
  <div className="mt-3 space-y-3">
  {loading?<div className="rounded-xl glass p-6 text-center text-sm text-muted-foreground">Carregando patrimônio...</div>:visible.length===0?<div className="rounded-2xl glass p-8 text-center"><Building2 className="mx-auto h-8 w-8 text-muted-foreground"/><p className="mt-3 text-sm font-medium">Nenhum investimento cadastrado nesta categoria</p><p className="mt-1 text-xs text-muted-foreground">Adicione aplicações de qualquer banco ou corretora para consolidar seu patrimônio.</p></div>:visible.map(x=><article key={x.id} className="rounded-2xl glass p-4">
-  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-semibold">{x.productName}</p><p className="text-xs text-muted-foreground">{x.institution} · {x.category}{x.ticker?" · "+x.ticker:""}</p></div><button onClick={()=>{if(confirm("Excluir este investimento do seu controle?"))void remove(x.id)}} className="rounded-lg p-2 text-muted-foreground hover:text-danger" aria-label="Excluir investimento"><Trash2 className="h-4 w-4"/></button></div>
+  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-semibold">{x.productName}</p><p className="text-xs text-muted-foreground">{x.institution} · {x.category}{x.ticker?" · "+x.ticker:""}</p></div><div className="flex shrink-0 gap-1"><button onClick={()=>edit(x)} className="rounded-lg p-2 text-muted-foreground hover:text-primary" aria-label="Editar investimento"><Pencil className="h-4 w-4"/></button><button onClick={()=>{if(confirm("Excluir este investimento do seu controle?"))void remove(x.id)}} className="rounded-lg p-2 text-muted-foreground hover:text-danger" aria-label="Excluir investimento"><Trash2 className="h-4 w-4"/></button></div></div>
   <div className="mt-3 grid grid-cols-2 gap-3"><div><p className="text-[10px] uppercase text-muted-foreground">Valor atual</p><p className="font-semibold tabular">{brl(x.currentValue)}</p></div><div><p className="text-[10px] uppercase text-muted-foreground">Aplicado</p><p className="font-semibold tabular">{brl(x.investedAmount)}</p></div><div><p className="text-[10px] uppercase text-muted-foreground">Resultado</p><p className={`text-sm font-semibold tabular ${x.currentValue>=x.investedAmount?"text-success":"text-danger"}`}>{x.currentValue>=x.investedAmount?"+":""}{brl(x.currentValue-x.investedAmount)}</p></div><div><p className="text-[10px] uppercase text-muted-foreground">Liquidez</p><p className="text-sm font-medium">{x.liquidity}</p></div></div>
   <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-muted-foreground">{x.annualRate!=null&&<span>{x.annualRate}% a.a. {x.rateIndex||"prefixado"}</span>}<span>{x.valuationMode==="manual"?"Valor informado manualmente":"Estimativa matemática"}</span>{x.maturityDate&&<span>Vence em {new Date(x.maturityDate+"T12:00:00").toLocaleDateString("pt-BR")}</span>}</div>
  </article>)}
  </div>
  {open&&<div className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={()=>setOpen(false)}>
  <form onSubmit={submit} onClick={e=>e.stopPropagation()} className="my-auto max-h-[92vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-t-3xl glass-strong p-5 sm:rounded-3xl">
-  <div className="flex items-center justify-between"><h2 className="font-display text-lg font-semibold">Novo investimento</h2><button type="button" onClick={()=>setOpen(false)}><X className="h-5 w-5"/></button></div>
+  <div className="flex items-center justify-between"><h2 className="font-display text-lg font-semibold">{editingId?"Editar investimento":"Novo investimento"}</h2><button type="button" onClick={()=>{setOpen(false);setEditingId(null)}}><X className="h-5 w-5"/></button></div>
   <p className="text-xs text-muted-foreground">Cadastre aplicações de qualquer instituição. Nenhuma compra ou transferência será realizada.</p>
   <label className="block text-xs text-muted-foreground">Banco ou corretora<input required maxLength={100} value={form.institution} onChange={e=>set("institution",e.target.value)} placeholder="Ex.: Banco Inter, XP, Nubank" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-foreground"/></label>
   <label className="block text-xs text-muted-foreground">Categoria<select value={form.category} onChange={e=>set("category",e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-[#171717] p-3 text-sm">{categories.map(c=><option key={c}>{c}</option>)}</select></label>
@@ -76,7 +76,7 @@ function Patrimonio(){
   <label className="block text-xs text-muted-foreground">Liquidez<select value={form.liquidity} onChange={e=>set("liquidity",e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-[#171717] p-3 text-sm">{["Diária","Imediata","No vencimento","Após carência","Sem liquidez / não informado"].map(x=><option key={x}>{x}</option>)}</select></label>
   <div className="grid grid-cols-2 gap-3"><label className="block text-xs text-muted-foreground">Data da aplicação<input type="date" value={form.startDate||""} onChange={e=>set("startDate",e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm"/></label><label className="block text-xs text-muted-foreground">Vencimento<input type="date" value={form.maturityDate||""} onChange={e=>set("maturityDate",e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm"/></label></div>
   <label className="block text-xs text-muted-foreground">Observações<textarea maxLength={1000} value={form.notes||""} onChange={e=>set("notes",e.target.value)} className="mt-1 min-h-16 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm"/></label>
-  <button type="submit" className="w-full rounded-xl gradient-primary p-3 text-sm font-semibold text-primary-foreground">Salvar investimento</button>
+  <button type="submit" className="w-full rounded-xl gradient-primary p-3 text-sm font-semibold text-primary-foreground">{editingId?"Salvar alterações":"Salvar investimento"}</button>
  </form></div>}
  </div>;
 }
