@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
-import { FIIS, getFII } from "@/data/fiis";
+import { FIIS } from "@/data/fiis";
 import { brl, num, pct } from "@/lib/format";
 import { useQuotes } from "@/hooks/useQuotes";
 
