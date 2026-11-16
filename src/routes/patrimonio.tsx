@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTrackedInvestments, type InvestmentInput, type TrackedInvestment } from "@/hooks/useTrackedInvestments";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { brl, pct } from "@/lib/format";
-import { Plus, Trash2, Download, Building2, X, FileDown, Pencil } from "lucide-react";
+import { Trash2, Download, Building2, X, FileDown, Pencil, Wallet } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -54,7 +54,7 @@ function Patrimonio(){
   <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">Soma dos valores atuais informados ou calculados neste aplicativo. Não representa saldo bancário confirmado nem consulta automática às instituições.</p>
  </section>
  <div className="mt-4 grid grid-cols-2 gap-2">
-  <button onClick={()=>{setEditingId(null);setForm(blank);setOpen(true)}} className="flex items-center justify-center gap-2 rounded-xl gradient-primary px-3 py-3 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4"/>Adicionar investimento</button>
+  <Link to="/carteira" className="flex items-center justify-center gap-2 rounded-xl gradient-primary px-3 py-3 text-sm font-semibold text-primary-foreground"><Wallet className="h-4 w-4"/>Cadastrar na Minha Carteira</Link>
   <button onClick={()=>exportCsv(items,fiiPositions)} disabled={!items.length&&!fiiPositions.length} className="flex items-center justify-center gap-2 rounded-xl glass px-3 py-3 text-sm font-semibold disabled:opacity-40"><Download className="h-4 w-4"/>CSV</button>
   <button onClick={()=>exportPdf(items,fiiPositions,totalInvested,totalCurrent)} disabled={!items.length&&!fiiPositions.length} className="col-span-2 flex items-center justify-center gap-2 rounded-xl glass px-3 py-2.5 text-sm font-semibold disabled:opacity-40"><FileDown className="h-4 w-4"/>Baixar relatório PDF</button>
  </div>
@@ -72,7 +72,7 @@ function Patrimonio(){
  {open&&<div className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={()=>setOpen(false)}>
  <form onSubmit={submit} onClick={e=>e.stopPropagation()} className="my-auto max-h-[92vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-t-3xl glass-strong p-5 sm:rounded-3xl">
   <div className="flex items-center justify-between"><h2 className="font-display text-lg font-semibold">{editingId?"Editar investimento":"Novo investimento"}</h2><button type="button" onClick={()=>{setOpen(false);setEditingId(null)}}><X className="h-5 w-5"/></button></div>
-  <p className="text-xs text-muted-foreground">Cadastre aplicações de qualquer instituição. Nenhuma compra ou transferência será realizada.</p>
+  <p className="text-xs text-muted-foreground">Edite os dados complementares desta aplicação. Para cadastrar novas cotas, ações, ETFs e ativos com cálculo automático, use a Minha Carteira. Nenhuma compra ou transferência será realizada.</p>
   <label className="block text-xs text-muted-foreground">Banco ou corretora<input required maxLength={100} value={form.institution} onChange={e=>set("institution",e.target.value)} placeholder="Ex.: Banco Inter, XP, Nubank" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-foreground"/></label>
   <label className="block text-xs text-muted-foreground">Categoria<select value={form.category} onChange={e=>set("category",e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-[#171717] p-3 text-sm">{categories.map(c=><option key={c}>{c}</option>)}</select></label>
   <label className="block text-xs text-muted-foreground">Nome do investimento<input required maxLength={140} value={form.productName} onChange={e=>set("productName",e.target.value)} placeholder="Ex.: CDB liquidez diária 100% CDI" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-foreground"/></label>

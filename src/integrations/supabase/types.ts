@@ -33,6 +33,7 @@ export type Database = {
           id: string
           shares: number
           ticker: string
+          institution: string
           updated_at: string
           user_id: string
         }
@@ -42,6 +43,7 @@ export type Database = {
           id?: string
           shares: number
           ticker: string
+          institution?: string
           updated_at?: string
           user_id: string
         }
@@ -51,6 +53,7 @@ export type Database = {
           id?: string
           shares?: number
           ticker?: string
+          institution?: string
           updated_at?: string
           user_id?: string
         }

@@ -431,3 +431,23 @@
 .wr-portfolio-form .wr-primary-link:disabled{opacity:.45}
 @media(max-width:850px){.wr-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-portfolio-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.wr-portfolio-page{padding:0 14px 28px}.wr-portfolio-summary{grid-template-columns:1fr 1fr;padding:14px}.wr-portfolio-toolbar{align-items:stretch;flex-direction:column}.wr-portfolio-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-portfolio-row{padding:14px}}
+
+
+/* Automatic portfolio investment calculator */
+.wr-quote-inline{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:12px;border:1px solid #3a3215;border-radius:12px;background:#e8c3000b}
+.wr-quote-inline>div{display:flex;flex-direction:column;gap:4px}
+.wr-quote-inline span,.wr-quote-inline small{color:#999;font-size:10px;line-height:1.5}
+.wr-quote-inline strong{color:#f2cf28;font-size:18px}
+.wr-quote-inline button{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #51451a;border-radius:9px;color:#e8c300;font-size:11px}
+.wr-quote-inline small{grid-column:1/-1}
+.wr-entry-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wr-entry-mode button{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 8px;border:1px solid #303030;border-radius:10px;background:#111;color:#aaa;font-size:11px;font-weight:600}
+.wr-entry-mode button.active{border-color:#b99b00;background:#e8c30016;color:#f0cf24}
+.wr-calculation-preview{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:13px;border:1px solid #303030;border-radius:12px;background:#101010}
+.wr-calculation-preview>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.wr-calculation-preview span{color:#929292;font-size:10px}
+.wr-calculation-preview b{color:#f2cf28;font-size:13px;overflow-wrap:anywhere}
+.wr-portfolio-form .wr-data-disclaimer{margin:0}
+@media(max-width:560px){.wr-invest-modal-backdrop{padding:10px}.wr-portfolio-form{max-height:90vh;padding:18px}.wr-quote-inline{grid-template-columns:1fr auto}.wr-calculation-preview{gap:8px}}
+
+.wr-field-help{color:#888;font-size:10px;line-height:1.5}
