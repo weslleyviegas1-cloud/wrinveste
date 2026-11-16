@@ -2,12 +2,13 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } f
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PWARegister } from "@/components/PWARegister";
 import { BottomNav } from "@/components/BottomNav";
-import { Home, Wallet, PieChart, Search, Calculator, Sparkles, BriefcaseBusiness } from "lucide-react";
+import { Home, Wallet, PieChart, Search, Calculator, Sparkles, BriefcaseBusiness, Landmark } from "lucide-react";
 import appCss from "../styles.css?url";
 
 const navigation = [
   { to: "/", label: "Início", icon: Home },
   { to: "/investimentos", label: "Investimentos", icon: BriefcaseBusiness },
+  { to: "/patrimonio", label: "Meu patrimônio", icon: Landmark },
   { to: "/fundos", label: "Pesquisar FIIs", icon: Search },
   { to: "/carteira", label: "Carteira", icon: Wallet },
   { to: "/simulador", label: "Análises", icon: PieChart },
