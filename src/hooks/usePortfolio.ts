@@ -72,7 +72,7 @@ export function usePortfolio() {
       if(cancelled)return;
       if(error){console.error("[positions] load error",error);setPositions(readLocal());setReady(true);return;}
       const cloud:Position[]=(data??[]).map((r:any)=>({ticker:r.ticker,shares:Number(r.shares),avgPrice:Number(r.avg_price),purchasedAt:r.created_at??undefined,institution:r.institution??""}));
-      if(cloud.length===0){const local=readLocal();if(local.length){const rows=local.map(p=>({user_id:user.id,ticker:p.ticker,shares:p.shares,avg_price:p.avgPrice}));await supabase.from("positions").upsert(rows,{onConflict:"user_id,ticker"});setPositions(local);setReady(true);return;}}
+      if(cloud.length===0){const local=readLocal();if(local.length){const rows=local.map(p=>({user_id:user.id,ticker:p.ticker,shares:p.shares,avg_price:p.avgPrice,institution:p.institution??""}));await supabase.from("positions").upsert(rows,{onConflict:"user_id,ticker"});setPositions(local);setReady(true);return;}}
       setPositions(cloud);setReady(true);
     }
     void load();return()=>{cancelled=true;};
