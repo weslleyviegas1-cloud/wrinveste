@@ -449,3 +449,5 @@
 .wr-calculation-preview b{color:#f2cf28;font-size:13px;overflow-wrap:anywhere}
 .wr-portfolio-form .wr-data-disclaimer{margin:0}
 @media(max-width:560px){.wr-invest-modal-backdrop{padding:10px}.wr-portfolio-form{max-height:90vh;padding:18px}.wr-quote-inline{grid-template-columns:1fr auto}.wr-calculation-preview{gap:8px}}
+
+.wr-field-help{color:#888;font-size:10px;line-height:1.5}
