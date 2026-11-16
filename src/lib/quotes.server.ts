@@ -4,7 +4,7 @@ type CacheEntry = { quote: Quote; expiresAt: number };
 
 const cache = new Map<string, CacheEntry>();
 const staleCache = new Map<string, Quote>();
-const TTL_MS = 5 * 60_000;
+const TTL_MS = 60_000;
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
@@ -63,8 +63,8 @@ async function fetchYahooHost(
   const sumLast12 = dividends.reduce((total, dividend) => total + dividend.amount, 0);
   const averageLast12 = dividends.length > 0 ? sumLast12 / 12 : 0;
   const lastDividend = Number(dividends[0]?.amount ?? averageLast12);
-  const monthlyDividend = lastDividend > 0 ? lastDividend : averageLast12;
-  const yearlyDividend = monthlyDividend * 12;
+  const monthlyDividend = averageLast12;
+  const yearlyDividend = sumLast12;
   const marketTime = typeof meta.regularMarketTime === "number"
     ? new Date(meta.regularMarketTime * 1000).toISOString()
     : undefined;
