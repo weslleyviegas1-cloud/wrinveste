@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuotes } from "@/hooks/useQuotes";
+import { getFII } from "@/data/fiis";
 
 export type AssetCategory = "FII" | "ACAO" | "ETF" | "BDR" | "TESOURO" | "CDB" | "LCI_LCA" | "DEBENTURE" | "CRI_CRA" | "FUNDO" | "PREVIDENCIA" | "COE" | "CRIPTO" | "OUTRO";
 export interface Position {
@@ -24,6 +25,11 @@ export interface PortfolioPosition extends Position {
   live: boolean;
   change: number | null;
   priceStatus: "market" | "cost_basis" | "unavailable";
+  fii: { name:string; segment:string; price:number; lastDividend:number; dividendYield:number };
+  received:number;
+  monthsHeld:number;
+  totalReturn:number;
+  totalReturnPct:number;
 }
 const KEY = "fii.portfolio.v1";
 const PREFIX = "WRASSET:";
@@ -94,9 +100,14 @@ export function usePortfolio() {
     const currentPrice=live?quote!.price:p.avgPrice;
     const invested=p.shares*p.avgPrice;
     const current=p.shares*currentPrice;
-    return {...p,...d,invested,current,currentPrice,profit:current-invested,profitPct:invested>0?((current-invested)/invested)*100:0,
-      monthlyDividend:d.category==="FII"&&quote?quote.monthlyDividend*p.shares:null,
-      yearlyDividend:d.category==="FII"&&quote?quote.yearlyDividend*p.shares:null,
+    const profit=current-invested;
+    const profitPct=invested>0?profit/invested*100:0;
+    const baseFii=getFII(d.symbol);
+    const monthlyDividend=d.category==="FII"&&quote?quote.monthlyDividend*p.shares:null;
+    const yearlyDividend=d.category==="FII"&&quote?quote.yearlyDividend*p.shares:null;
+    return {...p,...d,invested,current,currentPrice,profit,profitPct,
+      monthlyDividend,yearlyDividend,received:0,monthsHeld:0,totalReturn:profit,totalReturnPct:profitPct,
+      fii:{name:baseFii?.name??d.name,segment:baseFii?.segment??LABELS[d.category],price:currentPrice,lastDividend:quote?.lastDividend??0,dividendYield:quote?.dividendYield??0},
       live,change:live?quote!.change:null,priceStatus:live?"market":marketCategory?"unavailable":"cost_basis"};
   });
   const totals=enriched.reduce((a,p)=>({invested:a.invested+p.invested,current:a.current+p.current}),{invested:0,current:0});
@@ -104,7 +115,7 @@ export function usePortfolio() {
   const withWeights=enriched.map(p=>({...p,weight:totals.current>0?p.current/totals.current*100:0}));
   return {ready,positions:withWeights,totals:{...totals,profit,profitPct:totals.invested>0?profit/totals.invested*100:0,
     monthly:withWeights.reduce((s,p)=>s+(p.monthlyDividend??0),0),yearly:withWeights.reduce((s,p)=>s+(p.yearlyDividend??0),0),
-    received:0,yieldOnCost:0},addOrUpdate,remove,clearAll,setAll:(next:Position[])=>{setPositions(next);if(user)return;writeLocal(next);},
+    received:0,yieldOnCost:totals.invested>0?withWeights.reduce((s,p)=>s+(p.yearlyDividend??0),0)/totals.invested*100:0},addOrUpdate,remove,clearAll,setAll:(next:Position[])=>{setPositions(next);if(user)return;writeLocal(next);},
     cloudSynced:!!user,quotes,quotesLoading,quotesError,quotesUpdatedAt,refreshQuotes};
 }
 export const ASSET_LABELS=LABELS;
